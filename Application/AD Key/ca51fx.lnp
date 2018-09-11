@@ -1,0 +1,6 @@
+"main.obj",
+".\uart.obj" 
+TO "ca51fx" 
+PRINT(".\lst\ca51fx.m51") RAMSIZE(256) 
+CODE( 0X0000-0X7FFF )
+XDATA( 0X0000-0X0FFF )

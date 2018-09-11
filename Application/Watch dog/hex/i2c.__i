@@ -1,0 +1,1 @@
+"source\c\i2c.c" ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\i2c.lst) TABS (2) OBJECT(.\hex\i2c.obj)

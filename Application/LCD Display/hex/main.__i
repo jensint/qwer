@@ -1,0 +1,1 @@
+"main.c" ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\main.lst) TABS (2) OBJECT(.\hex\main.obj)

@@ -1,0 +1,88 @@
+<html>
+<body>
+<pre>
+<h1>礦ision Build Log</h1>
+<h2>Project:</h2>
+E:\CA51F\CA51F_SDK\软件库&应用实例\Application\Clock\Clock.uvproj
+Project File Date:  06/28/2017
+
+<h2>Output:</h2>
+*** Note: 'Create Batch File' is active - using 'Rebuild'.
+Rebuild target 'CA51FX'
+compiling main.c...
+compiling uart.c...
+compiling delay.c...
+compiling clock.c...
+compiling rtc.c...
+..\..\Library\Sources\rtc.c(6): warning C318: can't open file 'includes\ca51f2sfr.h'
+..\..\Library\Sources\rtc.c(7): warning C318: can't open file 'includes\ca51f2xsfr.h'
+..\..\Library\Sources\rtc.c(8): warning C318: can't open file 'includes\gpiodef_f2.h'
+..\..\Library\Sources\rtc.c(14): warning C315: unknown #directive 'inc'
+..\..\Library\Sources\rtc.c(29): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(40): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(41): error C202: 'RTCS': undefined identifier
+..\..\Library\Sources\rtc.c(43): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(54): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(55): error C202: 'RTCM': undefined identifier
+..\..\Library\Sources\rtc.c(57): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(69): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(70): error C202: 'RTCH': undefined identifier
+..\..\Library\Sources\rtc.c(72): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(84): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(85): error C202: 'RTCH': undefined identifier
+..\..\Library\Sources\rtc.c(87): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(101): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(114): error C202: 'RTAH': undefined identifier
+..\..\Library\Sources\rtc.c(115): error C202: 'RTAM': undefined identifier
+..\..\Library\Sources\rtc.c(116): error C202: 'RTAS': undefined identifier
+..\..\Library\Sources\rtc.c(127): error C202: 'RTMSS': undefined identifier
+assembling STARTUP.A51...
+Target not created
+*** Note: 'Create Batch File' is active - using 'Rebuild'.
+Rebuild target 'CA51FX'
+compiling main.c...
+compiling uart.c...
+compiling delay.c...
+compiling clock.c...
+compiling rtc.c...
+..\..\Library\Sources\rtc.c(6): warning C318: can't open file 'includes\ca51f2sfr.h'
+..\..\Library\Sources\rtc.c(7): warning C318: can't open file 'includes\ca51f2xsfr.h'
+..\..\Library\Sources\rtc.c(8): warning C318: can't open file 'includes\gpiodef_f2.h'
+..\..\Library\Sources\rtc.c(29): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(40): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(41): error C202: 'RTCS': undefined identifier
+..\..\Library\Sources\rtc.c(43): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(54): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(55): error C202: 'RTCM': undefined identifier
+..\..\Library\Sources\rtc.c(57): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(69): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(70): error C202: 'RTCH': undefined identifier
+..\..\Library\Sources\rtc.c(72): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(84): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(85): error C202: 'RTCH': undefined identifier
+..\..\Library\Sources\rtc.c(87): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(101): error C202: 'RTCON': undefined identifier
+..\..\Library\Sources\rtc.c(114): error C202: 'RTAH': undefined identifier
+..\..\Library\Sources\rtc.c(115): error C202: 'RTAM': undefined identifier
+..\..\Library\Sources\rtc.c(116): error C202: 'RTAS': undefined identifier
+..\..\Library\Sources\rtc.c(127): error C202: 'RTMSS': undefined identifier
+assembling STARTUP.A51...
+Target not created
+*** Note: 'Create Batch File' is active - using 'Rebuild'.
+Rebuild target 'CA51FX'
+compiling main.c...
+compiling uart.c...
+compiling delay.c...
+compiling clock.c...
+compiling rtc.c...
+assembling STARTUP.A51...
+linking...
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_DELAY_MS?DELAY
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_RTC_WRITEWEEK?RTC
+*** WARNING L16: UNCALLED SEGMENT, IGNORED FOR OVERLAY PROCESS
+    SEGMENT: ?PR?_RTC_SETRTMSS?RTC
+Program Size: data=77.4 xdata=496 code=2219
+creating hex file from ".\hex\ca51fx"...
+".\hex\ca51fx" - 0 Error(s), 3 Warning(s).

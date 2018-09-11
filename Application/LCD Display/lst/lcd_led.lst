@@ -1,0 +1,106 @@
+C51 COMPILER V9.51   LCD_LED                                                               09/11/2017 15:59:24 PAGE 1   
+
+
+C51 COMPILER V9.51, COMPILATION OF MODULE LCD_LED
+OBJECT MODULE PLACED IN .\hex\lcd_led.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\..\Library\Sources\lcd_led.c ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRIN
+                    -T(.\lst\lcd_led.lst) TABS(2) OBJECT(.\hex\lcd_led.obj)
+
+line level    source
+
+   1          #ifndef _LCD_C_
+   2          #define _LCD_C_
+   3          /*********************************************************************************************************
+             -************/
+   4          #include "ca51f_config.h"
+   5          #if (IC_TYPE == IC_TYPE_CA51F2X)
+   6          #include "../../includes/ca51f2sfr.h"
+   7          #include "../../includes/ca51f2xsfr.h"
+   8          #include "../../includes/gpiodef_f2.h"
+   9          #elif (IC_TYPE == IC_TYPE_CA51F3X)
+              #include "../../includes/ca51f3sfr.h"
+              #include "../../includes/ca51f3xsfr.h"
+              #include "../../includes/gpiodef_f3.h"
+              #endif
+  14          #include "../../includes/system.h"
+  15          #include "../../Library/includes/lcd_led.h"
+  16          #include <intrins.h>
+  17          /*********************************************************************************************************
+             -************/
+  18          /***********************************************************************************
+  19          函数名：LCD_init
+  20          功能说明：LCD寄存器初始化
+  21          输入参数： len    LCD时钟源选择
+  22                      dmod  驱动电流选择
+  23                      bias  偏压设置
+  24                      ldrv  驱动电压等级设置
+  25                      lxdiv LCD时钟分频系数
+  26          返回值：  无            
+  27          ***********************************************************************************/
+  28          void LCD_init(LEN_TypeDef len,DMOD_TypeDef dmod,BIAS_TypeDef bias,LDRV_TypeDef ldrv,unsigned int lxdiv)
+  29          {
+  30   1        LXDIVH = (unsigned char)(lxdiv>>8);
+  31   1        LXDIVL = (unsigned char)(lxdiv);  
+  32   1        LXCFG =  DMOD(dmod) | BIAS(bias) | LDRV(ldrv);
+  33   1        LXCON =  LEN(len) | LMOD(LMOD_lcd);  
+  34   1      }
+  35          /***********************************************************************************
+  36          函数名：LED_init
+  37          功能说明：LED寄存器初始化
+  38          输入参数： len      LCD时钟源选择
+  39                      comhv COM有效电平设置
+  40                      seghv SEG有效电平设置
+  41                      lxdiv   LED时钟分频系数
+  42          返回值：  无            
+  43          ***********************************************************************************/
+  44          void LED_init(LEN_TypeDef len,COMHV_TypeDef comhv,SEGHV_TypeDef seghv,LDRV_TypeDef ldrv,unsigned int lxdiv
+             -)
+  45          {
+  46   1        LXDIVH = (unsigned char)(lxdiv>>8);
+  47   1        LXDIVL = (unsigned char)(lxdiv);  
+  48   1        LXCFG =  COMHV(comhv) | SEGHV(seghv) | BLNK(0)|LDRV(ldrv);
+  49   1        LXCON =  LEN(len) | LMOD(LMOD_led);  
+  50   1      }
+  51          /***********************************************************************************
+C51 COMPILER V9.51   LCD_LED                                                               09/11/2017 15:59:24 PAGE 2   
+
+  52          函数名：LCD_LED_WriteLram
+  53          功能说明：写入数据到显示缓存
+  54          输入参数：  laddr 显示缓存地址
+  55                      ldata 显示缓存数据
+  56          返回值：  无            
+  57          ***********************************************************************************/
+  58          void LCD_LED_WriteLram(unsigned char laddr, unsigned char ldata)
+  59          {
+  60   1        INDEX = laddr;
+  61   1        LXDAT = ldata;
+  62   1      }
+  63          
+  64          /***********************************************************************************
+  65          函数名：LCD_LED_ReadLram
+  66          功能说明：从显示缓存读取数据
+  67          输入参数：  laddr   显示缓存地址
+  68          返回值：  显示缓存数据      
+  69          ***********************************************************************************/
+  70          unsigned char LCD_LED_ReadLram(unsigned char laddr)
+  71          {
+  72   1        INDEX = laddr;
+  73   1        return LXDAT;
+  74   1      }
+  75          /*********************************************************************************************************
+             -************/
+  76          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     77    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      12
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

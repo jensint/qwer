@@ -1,0 +1,205 @@
+C51 COMPILER V9.51   AD_KEY                                                                06/27/2017 14:50:11 PAGE 1   
+
+
+C51 COMPILER V9.51, COMPILATION OF MODULE AD_KEY
+OBJECT MODULE PLACED IN .\hex\ad_key.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ad_key.c ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\ad_key.lst) TAB
+                    -S(2) OBJECT(.\hex\ad_key.obj)
+
+line level    source
+
+   1          #ifndef _IRC_C_
+   2          #define _IRC_C_
+   3          
+   4          /*********************************************************************************************************
+             -************/
+   5          #include "ca51f_config.h"
+   6          #if (IC_TYPE == IC_TYPE_CA51F2X)
+              #include "../../includes/ca51f2sfr.h"
+              #include "../../includes/ca51f2xsfr.h"
+              #include "../../includes/gpiodef_f2.h"
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+  11          #include "../../includes/ca51f3sfr.h"
+  12          #include "../../includes/ca51f3xsfr.h"
+  13          #include "../../includes/gpiodef_f3.h"
+  14          #endif
+  15          #include "../../includes/system.h"
+  16          #include "../../Library/includes/uart.h"
+  17          #include "../../Library/includes/adc.h"
+  18          #include "key.h"
+  19          #include "ad_key.h"
+  20          #include <intrins.h>
+  21          /*********************************************************************************************************
+             -************/
+  22          unsigned char ADKey_LongKeyTimer;
+  23          unsigned char ADKey_ScanTimer;
+  24          bit ADKey_MonitorFlag;
+  25          bit ADKey_LongStartFlag;
+  26          unsigned int ADKey_Msg;
+  27          void Timer0_init(void)
+  28          {
+  29   1        TMOD=(TMOD&0xFC)|0x01;
+  30   1        TL0 = 0x00;
+  31   1        TH0 = 0xF4;
+  32   1        TR0 = 1;
+  33   1        ET0 = 1;  
+  34   1      }
+  35          void TIMER0_ISR (void) interrupt 1     //10ms 
+  36          {
+  37   1        TL0 = 0x00;
+  38   1        TH0 = 0xF4;
+  39   1      
+  40   1        if(ADKey_LongKeyTimer) ADKey_LongKeyTimer--;
+  41   1        if(ADKey_ScanTimer) ADKey_ScanTimer--;
+  42   1      
+  43   1      }
+  44          unsigned char ADC_GetKey(unsigned int ADC_Value)
+  45          {
+  46   1        code unsigned int KEY_AD_TAB[][2]=
+  47   1        {
+  48   1          {K1,0x0000},
+  49   1          {K2,0x0200},
+  50   1          {K3,0x0400},
+  51   1          {0,0x0FFF},
+  52   1        };
+C51 COMPILER V9.51   AD_KEY                                                                06/27/2017 14:50:11 PAGE 2   
+
+  53   1        unsigned char i;
+  54   1        for(i = 0; i < sizeof(KEY_AD_TAB)/4-1; i++)
+  55   1        {
+  56   2          if(ADC_Value < KEY_AD_TAB[i][1]/2 + KEY_AD_TAB[i+1][1]/2)
+  57   2          {
+  58   3            return KEY_AD_TAB[i][0];
+  59   3          }
+  60   2        }
+  61   1        return 0;
+  62   1      }
+  63          unsigned int ADCKey_GetMsg(void)
+  64          {
+  65   1        static unsigned int KeyBak = 0;
+  66   1        static unsigned char DebounceCnt = 0;
+  67   1        unsigned int ADC_Value,Msg = KEY_INVALID;
+  68   1        unsigned char KeyVal;
+  69   1        if(!ADKey_ScanTimer)
+  70   1        {
+  71   2          ADKey_ScanTimer = 2;
+  72   2          ADC_ConfigChannel(ADC_CH0); //配置ADC通道
+  73   2          ADC_StartConversion();      //启动ADC转换
+  74   2          ADC_Value = GetAdcValue();  //获取ADC数值
+  75   2      #ifdef PRINT_EN
+  76   2          if(ADC_Value < 0xFF0)
+  77   2          {
+  78   3      //      uart_printf("ADC_Value = 0x%x\n",ADC_Value);  
+  79   3          }
+  80   2      #endif
+  81   2          KeyVal = ADC_GetKey(ADC_Value);
+  82   2          if(!ADKey_MonitorFlag)
+  83   2          {
+  84   3            if(KeyVal != 0)
+  85   3            {
+  86   4              if(DebounceCnt == 0)
+  87   4              {
+  88   5                KeyBak = KeyVal;
+  89   5                DebounceCnt++;
+  90   5              }
+  91   4              else if(KeyBak == KeyVal)
+  92   4              {
+  93   5                DebounceCnt++;
+  94   5                if(DebounceCnt >= 1)
+  95   5                {
+  96   6                  Msg = KeyVal;
+  97   6                  ADKey_MonitorFlag = 1;
+  98   6                  ADKey_LongStartFlag = 0;
+  99   6                  ADKey_LongKeyTimer = KEY_LONG_START_TIME;
+ 100   6                  DebounceCnt = 0;
+ 101   6                }
+ 102   5              }
+ 103   4              else
+ 104   4              {
+ 105   5                DebounceCnt = 0;
+ 106   5              }
+ 107   4            }
+ 108   3          }
+ 109   2          else
+ 110   2          {
+ 111   3            if(KeyBak == KeyVal)
+ 112   3            {
+ 113   4              DebounceCnt = 0;
+ 114   4              if(!ADKey_LongKeyTimer)
+C51 COMPILER V9.51   AD_KEY                                                                06/27/2017 14:50:11 PAGE 3   
+
+ 115   4              {
+ 116   5                if(!ADKey_LongStartFlag)
+ 117   5                {
+ 118   6                  ADKey_LongStartFlag = 1;
+ 119   6                  Msg = KeyBak | KEY_LONG_START;
+ 120   6                }
+ 121   5                else
+ 122   5                {
+ 123   6                  Msg = KeyBak | KEY_LONG;
+ 124   6                }
+ 125   5                ADKey_LongKeyTimer = KEY_LONG_TIME;
+ 126   5              }   
+ 127   4            }
+ 128   3            else
+ 129   3            {
+ 130   4              DebounceCnt++;
+ 131   4              if(DebounceCnt >= 2)
+ 132   4              {
+ 133   5                if(!ADKey_LongStartFlag)
+ 134   5                {
+ 135   6                  Msg = KeyBak | KEY_BREAK;
+ 136   6                }
+ 137   5                else
+ 138   5                {
+ 139   6                  Msg = KeyBak | KEY_LONG_BREAK;
+ 140   6                }
+ 141   5                ADKey_MonitorFlag = 0;    
+ 142   5              }
+ 143   4            }
+ 144   3          }
+ 145   2        }
+ 146   1        return Msg;
+ 147   1      }
+ 148          void ADKey_init(void)
+ 149          {
+ 150   1      #if (IC_TYPE == IC_TYPE_CA51F2X)
+                GPIO_Init(P40F,P40_ADC0_SETTING);
+              #elif (IC_TYPE == IC_TYPE_CA51F3X) 
+ 153   1        GPIO_Init(P10F,P10_ADC0_SETTING); 
+ 154   1      #endif
+ 155   1        ADC_init(ADC_REF_VDD,DISABLE,DISABLE,0);
+ 156   1        ADKey_MonitorFlag = 0;
+ 157   1      }
+ 158          void ADKey_MainLoop(void)
+ 159          {
+ 160   1        Timer0_init();
+ 161   1        ADKey_init();
+ 162   1        while(1)
+ 163   1        {
+ 164   2          ADKey_Msg = ADCKey_GetMsg();
+ 165   2          if(ADKey_Msg != KEY_INVALID)
+ 166   2          {
+ 167   3      #ifdef PRINT_EN
+ 168   3            uart_printf("ADKey_Msg = 0x%x\n",ADKey_Msg);  
+ 169   3      #endif    
+ 170   3          }
+ 171   2        }
+ 172   1      }
+ 173          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+C51 COMPILER V9.51   AD_KEY                                                                06/27/2017 14:50:11 PAGE 4   
+
+   CODE SIZE        =    345    ----
+   CONSTANT SIZE    =     34    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      7       4
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

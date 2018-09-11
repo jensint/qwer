@@ -1,0 +1,1 @@
+"Library\Sources\exint.c" LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\exint.lst) TABS (2) OBJECT(.\Output\exint.obj)

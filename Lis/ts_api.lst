@@ -1,0 +1,194 @@
+C51 COMPILER V9.52.0.0   TS_API                                                            07/24/2018 11:06:15 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE TS_API
+OBJECT MODULE PLACED IN .\Output\ts_api.obj
+COMPILER INVOKED BY: E:\Keil\C51\BIN\C51.EXE TS_Lib\Sources\ts_api.c LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;
+                    -.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\ts_api.lst) TABS(2) OBJECT(.\Output\ts_api.obj)
+
+line level    source
+
+   1          #ifndef _TK_API_C_
+   2          #define _TK_API_C_
+   3          
+   4          /*********************************************************************************************************
+             -************/
+   5          #include "ca51f_config.h"
+   6          #if (IC_TYPE == IC_TYPE_CA51F2X)
+              #include "ca51f2sfr.h"
+              #include "ca51f2xsfr.h"
+              #include "gpiodef_f2.h"
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+  11          #include "ca51f3sfr.h"
+  12          #include "ca51f3xsfr.h"
+  13          #include "gpiodef_f3.h"
+  14          #endif
+  15          #include "rtc.h"    
+  16          #include "system_clock.h"   
+  17          #include "uart.h"
+  18          /*********************************************************************************************************
+             -************/
+  19          #include "ts_configuration.h"
+  20          #include "ts_def.h"
+  21          #include "ts_api.h"
+  22          #include "ts_service.h"      
+  23          /*********************************************************************************************************
+             -************/
+  24          void TS_init(void)
+  25          {
+  26   1      #if (SUPPORT_STOP_MODE_AUTO_SCAN || SUPPORT_STOP_MODE_MANUAL_SCAN)
+              #if (RTC_CLK_SELECT == IRCL)
+                unsigned char ilh,ill;  
+              #endif
+              #endif
+  31   1        
+  32   1      #if SUPPORT_WHEEL_SLIDER
+                unsigned char i;
+              #endif
+  35   1        
+  36   1      #if DEBUG
+                I2C_init();
+              #endif
+  39   1      
+  40   1      #if 0
+              #if (RTC_CLK_SELECT == IRCL)
+                CKCON |= ILCKE;
+                CKSEL |= RTCKS(1);
+              #elif (RTC_CLK_SELECT == XOSCL) 
+                CKCON |= XLCKE;
+                while(!(CKCON & XLSTA));
+              #endif
+              
+                RTC_init(RTCE_On,MSE_On,HSE_On);
+                RTC_SetRTMSS(0);
+              
+C51 COMPILER V9.52.0.0   TS_API                                                            07/24/2018 11:06:15 PAGE 2   
+
+                INT8EN = 1;     
+              #endif
+  54   1      
+  55   1        TS_Cnt    = OPENED_TS_COUNT;
+  56   1      
+  57   1        TS_IO_init();
+  58   1        TKCON = TKST(0)|TKIE(1)|TMEN(0)|TWKE(0)|VRS(VRS_VAL);
+  59   1        TKCFG = TKDIV(TKDIV_VAL)|TKTMS(TKTMS_VAL);    
+  60   1        INT3EN = 1; 
+  61   1      
+  62   1        TS_CycleScanDoneFlag = 0;
+  63   1        TS_InitTimer = 0;
+  64   1      #if SUPPORT_KEY 
+  65   1        KeysFlagSN = 0; 
+  66   1      #endif
+  67   1      #if (SUPPORT_STOP_MODE_AUTO_SCAN || SUPPORT_STOP_MODE_MANUAL_SCAN)
+                EnterStopScanTimer = ENTER_STOP_MODE_TIME;
+              #if (RTC_CLK_SELECT == IRCL)
+                ilh = ILCFGH;
+                ill = ILCFGL;
+                Calibration_IL_Targ__IH_Ref(72089);
+                ILH_72K = ILCFGH;
+                ILL_72K = ILCFGL;   
+                ILCFGH = ilh;
+                ILCFGL = ill;
+              #endif  
+                TS_GetWakeupChInfo();
+              #endif
+  80   1        TS_State = TS_INIT;
+  81   1        TS_Init_Step = 0;
+  82   1      
+  83   1      
+  84   1      #if SUPPORT_WHEEL_SLIDER
+                for(i = 0; i < WHEEL_SLIDER_COUNT; i++)
+                {
+                  WheelSliderState[i] = WHEEL_SLIDER_NO_TOUCH;
+                  WheelSliderTouchFlag[i] = 0;
+                  WheelSliderPosition[i] = -1;    
+                }
+              #endif    
+  92   1      }
+  93          
+  94          void TS_Action(void)
+  95          {
+  96   1      #if (SUPPORT_STOP_MODE_AUTO_SCAN || SUPPORT_STOP_MODE_MANUAL_SCAN)
+                bit EnterStopFlag = 0;
+              #endif
+  99   1        switch(TS_State)
+ 100   1        {
+ 101   2          case TS_INIT:
+ 102   2            TS_RunInit();     
+ 103   2            break;
+ 104   2          case TS_DEAL:   
+ 105   2            
+ 106   2            if(TS_CycleScanDoneFlag)
+ 107   2            {     
+ 108   3              
+ 109   3              TS_CycleScanDoneFlag = 0;
+ 110   3      #if ANTI_SPEAKPHONE
+                      TS_CheckRefCh();
+              #endif
+ 113   3              TS_DataFiltering();
+C51 COMPILER V9.52.0.0   TS_API                                                            07/24/2018 11:06:15 PAGE 3   
+
+ 114   3      
+ 115   3      #if (SUPPORT_STOP_MODE_AUTO_SCAN || SUPPORT_STOP_MODE_MANUAL_SCAN)
+                      if(EnterStopScanTimer)
+              #endif
+ 118   3              {
+ 119   4                TS_Index = 0;
+ 120   4                TS_ScanStart();                 
+ 121   4              }
+ 122   3      #if (SUPPORT_STOP_MODE_AUTO_SCAN || SUPPORT_STOP_MODE_MANUAL_SCAN)
+                      else
+                      {
+                        EnterStopFlag = 1;
+                      }
+              #endif
+ 128   3      #if SUPPORT_KEY
+ 129   3              TSKey_DataDeal();
+ 130   3      #endif
+ 131   3      #if SUPPORT_WHEEL_SLIDER
+                      TS_WheelSliderDeal();
+              #endif  
+ 134   3      
+ 135   3      #if SUPPORT_WATER_DETECT
+                      TS_WaterDetectDeal();
+              #endif  
+ 138   3              
+ 139   3      #if SUPPORT_STOP_MODE_AUTO_SCAN
+                      if(EnterStopFlag)
+                      {
+                        TS_EnterStopModeAutoScan(); 
+                      }
+              #endif    
+ 145   3      #if SUPPORT_STOP_MODE_MANUAL_SCAN
+                      if(EnterStopFlag)
+                      {
+                        Uart0_PutChar('E');
+                        TS_EnterStopModeManaulScan(); 
+                        Uart0_PutChar('S');
+                      }
+              #endif                    
+ 153   3            }
+ 154   2            break;
+ 155   2          default:
+ 156   2            break;
+ 157   2        }
+ 158   1      
+ 159   1      }
+ 160          
+ 161          /*********************************************************************************************************
+             -************/
+ 162          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     76    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      5    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

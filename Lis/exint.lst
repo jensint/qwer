@@ -1,0 +1,60 @@
+C51 COMPILER V9.52.0.0   EXINT                                                             07/24/2018 11:06:15 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE EXINT
+OBJECT MODULE PLACED IN .\Output\exint.obj
+COMPILER INVOKED BY: E:\Keil\C51\BIN\C51.EXE Library\Sources\exint.c LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;
+                    -.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\exint.lst) TABS(2) OBJECT(.\Output\exint.obj)
+
+line level    source
+
+   1          #ifndef _EXINT_C_
+   2          #define _EXINT_C_
+   3          
+   4          /*********************************************************************************************************
+             -************/
+   5          #include "ca51f_config.h"
+   6          #if (IC_TYPE == IC_TYPE_CA51F2X)
+              #include "../../includes/ca51f2sfr.h"
+              #include "../../includes/ca51f2xsfr.h"
+              #include "../../includes/gpiodef_f2.h"
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+  11          #include "../../includes/ca51f3sfr.h"
+  12          #include "../../includes/ca51f3xsfr.h"
+  13          #include "../../includes/gpiodef_f3.h"
+  14          #endif
+  15          #include "../../includes/system.h"
+  16          #include "../../Library/includes/exint.h"
+  17          #include <intrins.h>
+  18          
+  19          
+  20          void INT0_Init(INT_Index_TypeDef int_index, INT_Trigger_TypeDef trigger, unsigned char priority)
+  21          {
+  22   1        //确定中断引脚设置为输入引脚
+  23   1        IT0CON = int_index;      // 选择P20作为中断0引脚，16为P20对应的索引编号
+  24   1        EX0 = 1;              //INT0中断0使能
+  25   1        IE0 = 1;              //外部中断0使能
+  26   1        IT0 = trigger;        //设置中断方式
+  27   1        PX0 = priority;       //设置中断优先级
+  28   1      }
+  29          
+  30          
+  31          
+  32          
+  33          
+  34          
+  35          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     17    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,9 @@
+".\hex\main.obj",
+".\hex\uart.obj",
+".\hex\power_saving.obj",
+".\hex\stop_idle.obj",
+".\hex\STARTUP.obj" 
+TO ".\hex\ca51fx" 
+PRINT(".\lst\ca51fx.m51") RAMSIZE(256) 
+CODE( 0X0000-0X7FFF )
+XDATA( 0X0000-0X0FFF )

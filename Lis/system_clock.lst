@@ -1,0 +1,119 @@
+C51 COMPILER V9.52.0.0   SYSTEM_CLOCK                                                      07/24/2018 11:06:13 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE SYSTEM_CLOCK
+OBJECT MODULE PLACED IN .\Output\system_clock.obj
+COMPILER INVOKED BY: E:\Keil\C51\BIN\C51.EXE Library\Sources\system_clock.c LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;
+                    -.\User;.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\system_clock.lst) TABS(2) OBJECT(.\Output\sy
+                    -stem_clock.obj)
+
+line level    source
+
+   1          #ifndef _SYSTEM_CLOCK_C_
+   2          #define _SYSTEM_CLOCK_C_
+   3          /*********************************************************************************************************
+             -************/
+   4          #include "ca51f_config.h"
+   5          #if (IC_TYPE == IC_TYPE_CA51F2X)
+              #include "ca51f2sfr.h"
+              #include "ca51f2xsfr.h"
+              #include "gpiodef_f2.h"
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+  10          #include "ca51f3sfr.h"
+  11          #include "ca51f3xsfr.h"
+  12          #include "gpiodef_f3.h"
+  13          #endif
+  14          #include "system.h"
+  15          #include "system_clock.h"
+  16          #include <intrins.h>
+  17          /*********************************************************************************************************
+             -************/
+  18          void Sys_Clk_Set_IRCH(void)
+  19          {
+  20   1        CKCON |= IHCKE;
+  21   1        CKSEL = (CKSEL&0xF8) | CKSEL_IRCH;    
+  22   1      }
+  23          void Sys_Clk_Set_IRCL(void)
+  24          {
+  25   1        CKCON |= ILCKE;
+  26   1        CKSEL = (CKSEL&0xF8) | CKSEL_IRCL;    
+  27   1      }
+  28          void Sys_Clk_Set_XOSCL(void)
+  29          {
+  30   1      #if (IC_TYPE == IC_TYPE_CA51F3X)
+  31   1        GPIO_Init(P32F,P32_XOSCL_IN_SETTING);
+  32   1        GPIO_Init(P33F,P33_XOSCL_OUT_SETTING);
+  33   1      #elif  (IC_TYPE == IC_TYPE_CA51F2X)
+                GPIO_Init(P71F,P71_XOSCL_OUT_SETTING);
+                GPIO_Init(P72F,P72_XOSCL_IN_SETTING);
+              #endif
+  37   1        CKCON |= XLCKE;
+  38   1        while(!(CKCON & XLSTA));
+  39   1        CKSEL = (CKSEL&0xF8) | CKSEL_XOSCL;   
+  40   1      }
+  41          void Sys_Clk_Set_PLL(unsigned char Multiple)
+  42          {
+  43   1        static bit NeedTrim = 1;
+  44   1        unsigned char ck_bak;
+  45   1        if(Multiple < 2 || Multiple > 8) return;
+  46   1        if(NeedTrim)
+  47   1        {
+  48   2          ck_bak = CKCON;
+  49   2          CKCON |= ILCKE|IHCKE|TFCKE;
+  50   2          VCKDH = 1600/256;
+  51   2          VCKDL = 1600%256;
+C51 COMPILER V9.52.0.0   SYSTEM_CLOCK                                                      07/24/2018 11:06:13 PAGE 2   
+
+  52   2          RCCON = MODE(2) | MSEX(0) | CKSS(8);
+  53   2          while(RCCON&0xC0);  
+  54   2          
+  55   2          RCTAGH = RCMSLH;
+  56   2          RCTAGL = RCMSLL;
+  57   2          
+  58   2          CKSEL = (CKSEL&0xF8) | CKSEL_TFRC;      
+  59   2          RCCON = MODE(3) | MSEX(0) | CKSS(8);
+  60   2          while(RCCON&0xC0);    
+  61   2        }
+  62   1      
+  63   1        PLLCON = PLLON(1) | MULFT(Multiple-2);
+  64   1        while(!(PLLCON & PLSTA));
+  65   1        CKSEL = (CKSEL&0xF8) | CKSEL_PLL;   
+  66   1        if(NeedTrim)
+  67   1        {
+  68   2          CKCON = ck_bak | IHCKE;
+  69   2          NeedTrim = 0;
+  70   2        }
+  71   1      }
+  72          #if (IC_TYPE == IC_TYPE_CA51F2X)
+              void Sys_Clk_Set_XOSCH(void)
+              {
+                GPIO_Init(P74F,P74_XOSCH_IN_SETTING);
+                GPIO_Init(P73F,P73_XOSCH_OUT_SETTING);
+                CKCON |= XHCKE;
+                while(!(CKCON & XHSTA));
+                CKSEL = (CKSEL&0xF8) | CKSEL_XOSCH;   
+              }
+              #endif
+  82          void Sys_Clk_Set_TFRC(void)
+  83          {
+  84   1        CKCON |= TFCKE;
+  85   1        CKSEL = (CKSEL&0xF8) | CKSEL_TFRC;    
+  86   1      }
+  87          
+  88          /*********************************************************************************************************
+             -************/
+  89          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    152    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

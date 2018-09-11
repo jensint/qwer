@@ -1,0 +1,1 @@
+"irc.c" ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\irc.lst) TABS (2) OBJECT(.\hex\irc.obj)

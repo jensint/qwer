@@ -1,0 +1,27 @@
+".\Output\main.obj",
+".\Output\app_task.obj",
+".\Output\adc_key.obj",
+".\Output\bluetooth_control.obj",
+".\Output\isr.obj",
+".\Output\led_control.obj",
+".\Output\pll_i2c.obj",
+".\Output\RDA5807.obj",
+".\Output\STARTUP.obj",
+".\Output\system_clock.obj",
+".\Output\wdt.obj",
+".\Output\uart.obj",
+".\Output\pwm.obj",
+".\Output\adc.obj",
+".\Output\stop_idle.obj",
+".\Output\delay.obj",
+".\Output\lcd_led.obj",
+".\Output\timer.obj",
+".\Output\exint.obj",
+".\Output\rtc.obj",
+".\Output\ts_api.obj",
+".\Output\ts_sevice.obj",
+".\Output\key.obj" 
+TO ".\Output\DCM0502C" 
+PRINT(".\Lis\DCM0502C.m51") RAMSIZE(256) 
+CODE( 0X0000-0X7FFF )
+XDATA( 0X0000-0X0FFF )

@@ -1,0 +1,1 @@
+"User\pll_i2c.c" LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\pll_i2c.lst) TABS (2) OBJECT(.\Output\pll_i2c.obj)

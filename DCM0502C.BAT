@@ -1,0 +1,32 @@
+SET C51INC=E:\Keil\C51\Inc;E:\Keil\C51\Inc\Cast
+SET C51LIB=E:\Keil\C51\Lib
+SET CPU_TYPE=R8051XC2
+SET CPU_VENDOR=CAST, Inc.
+SET UV2_TARGET=DCM0502C
+SET CPU_XTAL=0x016E3600
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\main.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\app_task.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\adc_key.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\BLUETO~1.__I
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\isr.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\LED_CO~1.__I
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\pll_i2c.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\RDA5807.__i
+"E:\Keil\C51\BIN\A51.EXE" @.\Output\STARTUP._ia
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\SYSTEM~1.__I
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\wdt.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\uart.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\pwm.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\adc.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\STOP_I~1.__I
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\delay.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\lcd_led.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\timer.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\exint.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\rtc.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\ts_api.__i
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\TS_SEV~1.__I
+"E:\Keil\C51\BIN\C51.EXE" @.\Output\key.__i
+"E:\Keil\C51\BIN\BL51.EXE" @.\Output\DCM0502C.lnp
+"E:\Keil\C51\BIN\OH51.EXE" ".\Output\DCM0502C" 
+hex2bin.exe    ./output/DCM0502C.hex  ./output/DCM0502C.bin

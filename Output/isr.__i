@@ -1,0 +1,1 @@
+"User\isr.c" LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\isr.lst) TABS (2) OBJECT(.\Output\isr.obj)

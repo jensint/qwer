@@ -1,0 +1,1 @@
+"TS_Lib\Sources\debug.c" ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\Library\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\debug.lst) TABS (2) OBJECT(.\Output\debug.obj)

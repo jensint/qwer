@@ -1,0 +1,1 @@
+"User\led_control.c" LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\led_control.lst) TABS (2) OBJECT(.\Output\led_control.obj)

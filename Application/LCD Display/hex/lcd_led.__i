@@ -1,0 +1,1 @@
+"..\..\Library\Sources\lcd_led.c" ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\lcd_led.lst) TABS (2) OBJECT(.\hex\lcd_led.obj)

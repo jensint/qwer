@@ -1,0 +1,329 @@
+C51 COMPILER V9.52.0.0   RDA5807                                                           07/24/2018 11:06:13 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE RDA5807
+OBJECT MODULE PLACED IN .\Output\RDA5807.obj
+COMPILER INVOKED BY: E:\Keil\C51\BIN\C51.EXE User\RDA5807.c LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\Library
+                    -\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\RDA5807.lst) TABS(2) OBJECT(.\Output\RDA5807.obj)
+
+line level    source
+
+   1          
+   2          
+   3          #include "RDA5807.h"
+   4          #include "pll_i2c.h"
+   5          #include "app_config.h"
+   6          
+   7          unsigned int xdata Rda5807Reg[4]={0xC001,0x0042,0x0c00,0x86a8};
+   8          
+   9          code unsigned int RDA5807_FM_INIT_REG[] = 
+  10          {
+  11            0xc001,         //v10
+  12            0x0042,  
+  13            0x0c00,  //0x0400     
+  14            0x16a8, 
+  15            0x8000,  
+  16            0x3ac6,//07H  0x46  修改立体声分离度
+  17            0x5ec6,  //0x5ec6
+  18            0x0000,  
+  19            0x406e, 
+  20            0x2d80,  
+  21            0x5803,  
+  22            0x5804,//0dh  
+  23            0x5804,  
+  24            0x5804,  
+  25            0x0047, //10h
+  26            0x9000,  
+  27            0xF587,  
+  28            0x0009,  
+  29            0x00F1,  
+  30            0x41c0, //15h
+  31            0x41e0,  
+  32            0x506f,  
+  33            0x5592,  
+  34            0x007d,  
+  35            0x10E0, //1AH 
+  36            0x0780,  
+  37            0x3000,
+  38            0x4006,  
+  39            0x1f9B,  
+  40            0x4c2b,
+  41            0x8110, 
+  42            0x4580,//21H
+  43            0x153f,  
+  44            0xaf40, 
+  45            0x0481,  
+  46            0x1b2a, 
+  47            0x2D04,  
+  48            0x802F,  
+  49            0x178A,  
+  50            0xD349,  
+  51            0x1142, 
+  52          };
+  53          
+  54          
+C51 COMPILER V9.52.0.0   RDA5807                                                           07/24/2018 11:06:13 PAGE 2   
+
+  55          void _RDA_Write_REG(uint16_t *buf, uint8_t len)
+  56          {
+  57   1        uint8_t valueL;
+  58   1        uint8_t valueH;
+  59   1        uint8_t i;
+  60   1        
+  61   1        PLL_I2C_Start();
+  62   1        PLL_I2C_Write_Byte(0x20);
+  63   1        for(i =0; i<len; i++)
+  64   1        {
+  65   2          valueL = (*(buf+i))&0xff;
+  66   2          valueH = ((*(buf+i)>>8)&0xff);
+  67   2          PLL_I2C_Write_Byte(valueH);
+  68   2          PLL_I2C_Write_Byte(valueL);
+  69   2        }
+  70   1        PLL_I2C_Stop();
+  71   1      }
+  72          
+  73          
+  74          
+  75          void _RDA_Read_Reg(uint16_t *buf, uint8_t len)
+  76          {
+  77   1        uint8_t valueL;
+  78   1        uint8_t valueH;
+  79   1        uint8_t i;
+  80   1      
+  81   1        PLL_I2C_Start();
+  82   1        PLL_I2C_Write_Byte(0x21);
+  83   1        
+  84   1        for(i =0; i<len; i++)
+  85   1        {
+  86   2          valueH = PLL_I2C_Read_Byte(); 
+  87   2          PLL_I2C_Ack();
+  88   2          valueL = PLL_I2C_Read_Byte();
+  89   2          
+  90   2          if(i!= (len-1))
+  91   2          {
+  92   3            PLL_I2C_Ack();
+  93   3          }
+  94   2          else
+  95   2          {
+  96   3            PLL_I2C_NoAck();
+  97   3          }
+  98   2          *buf++ = (((unsigned int)valueH) << 8) | valueL;
+  99   2        }
+ 100   1        PLL_I2C_Stop();
+ 101   1      }
+ 102          
+ 103          uint8_t RDA5807_Write_REG(uint8_t addr, uint16_t dat)
+ 104          {
+ 105   1        
+ 106   1        PLL_I2C_Start();
+ 107   1        
+ 108   1        if(PLL_I2C_Write_Byte(RDA5807_CHIP_ADDR|WRITE))
+ 109   1        {
+ 110   2          PLL_I2C_Write_Byte(addr);
+ 111   2          PLL_I2C_Write_Byte(dat>>8);
+ 112   2          PLL_I2C_Write_Byte(dat&0xff);
+ 113   2          PLL_I2C_Stop();
+ 114   2          return 1;
+ 115   2        }
+ 116   1        PLL_I2C_Stop();
+C51 COMPILER V9.52.0.0   RDA5807                                                           07/24/2018 11:06:13 PAGE 3   
+
+ 117   1        return 0;
+ 118   1      }
+ 119          
+ 120          
+ 121          
+ 122          uint16_t RDA5807_Read_REG(uint8_t addr)
+ 123          {
+ 124   1        uint16_t dat;
+ 125   1        
+ 126   1        PLL_I2C_Start();
+ 127   1        
+ 128   1        PLL_I2C_Write_Byte(RDA5807_CHIP_ADDR|WRITE);
+ 129   1        PLL_I2C_Write_Byte(addr);
+ 130   1        
+ 131   1        PLL_I2C_Start();
+ 132   1        PLL_I2C_Write_Byte(RDA5807_CHIP_ADDR|READ);
+ 133   1        dat |= PLL_I2C_Read_Byte();
+ 134   1        PLL_I2C_Ack();
+ 135   1        dat <<= 8;
+ 136   1        dat |= PLL_I2C_Read_Byte();
+ 137   1        PLL_I2C_NoAck();
+ 138   1        PLL_I2C_Stop();
+ 139   1      
+ 140   1        return dat;
+ 141   1      }
+ 142          
+ 143          
+ 144          
+ 145          
+ 146          uint8_t RDA5807_ReadID(void)
+ 147          {
+ 148   1        RDA5807_Write_REG(RDA_REG_02, 0x0002);  //软复位
+ 149   1        Delay_ms(200);
+ 150   1        
+ 151   1        if(RDA5807_Read_REG(RDA_REG_00) == CHIP_ID)
+ 152   1        {
+ 153   2          return 1;
+ 154   2        }
+ 155   1        return 0;
+ 156   1      }
+ 157          
+ 158          void to_RDA5807_Init(uint8_t mode)
+ 159          {
+ 160   1          if(mode==1)
+ 161   1          {
+ 162   2            return ;
+ 163   2          }
+ 164   1          else
+ 165   1          { 
+ 166   2            RDA5807_Init();
+ 167   2          }
+ 168   1            
+ 169   1      }
+ 170          
+ 171          void RDA5807_Init(void)
+ 172          {
+ 173   1        uint16_t RDA_REG[4];
+ 174   1        
+ 175   1        RDA_REG[0] = 0x0002;   //先进行软复位
+ 176   1        _RDA_Write_REG(RDA_REG, 1);     
+ 177   1        Delay_ms(100);        
+ 178   1        RDA_REG[0] = 0xc001;      //往02H中写入0XC001：使用32.768K频率
+C51 COMPILER V9.52.0.0   RDA5807                                                           07/24/2018 11:06:13 PAGE 4   
+
+ 179   1        _RDA_Write_REG(RDA_REG, 1);
+ 180   1        Delay_ms(100);
+ 181   1      //  RDA_REG[0] = 0xc001;
+ 182   1      //  RDA_REG[1] = 0x0042;
+ 183   1      //  RDA_REG[2] = 0x0c00;
+ 184   1      //  RDA_REG[3] = 0x86a8;
+ 185   1      //  _RDA_Write_REG(RDA_REG, 4);
+ 186   1        _RDA_Write_REG(RDA5807_FM_INIT_REG,sizeof(RDA5807_FM_INIT_REG)/2);
+ 187   1      //  _RDA_Write_REG(Rda5807Reg, 4);
+ 188   1        Delay_ms(100);
+ 189   1      //  RDA5807_Write_REG(RDA_REG_02, 0x0002);  //软复位
+ 190   1      //  Delay_ms(100);
+ 191   1      //  RDA5807_Write_REG(RDA_REG_02, 0xc001);
+ 192   1      //  RDA5807_Write_REG(RDA_REG_03, 0x0000);
+ 193   1      //  RDA5807_Write_REG(RDA_REG_04, 0x0400);
+ 194   1      //  RDA5807_Write_REG(RDA_REG_05, 0x86af);
+ 195   1      //  
+ 196   1        RDA5807_FreqSet(sys_state.FMFreq);
+ 197   1      //  Delay_ms(50);
+ 198   1        
+ 199   1      }
+ 200          
+ 201          
+ 202          
+ 203          void RDA5807_FreqSet(uint16_t freq)
+ 204          {
+ 205   1        unsigned int reg[2] = {0x0000,0x0000};
+ 206   1        uint16_t chan;
+ 207   1        
+ 208   1        if((freq < 875) || (freq > 1080))
+ 209   1        {
+ 210   2          freq = 875;
+ 211   2        }
+ 212   1        
+ 213   1        chan = sys_state.FMFreq - 870;
+ 214   1        Rda5807Reg[1]= (Rda5807Reg[1]&0x003f)|(chan<<6);
+ 215   1      //  temp = ((sys_state.FMFreq - 870)<<6)|0x0010;
+ 216   1        reg[0]=Rda5807Reg[0];
+ 217   1        reg[1]=(Rda5807Reg[1])|0x0010;   //波段：87~108.频率间距：50K Hz
+ 218   1      //  RDA5807_Write_REG(RDA_REG_03, temp);
+ 219   1        _RDA_Write_REG(reg, 2);
+ 220   1        
+ 221   1      //  Delay_ms(100);
+ 222   1      //  
+ 223   1      //  if((RDA5807_Read_REG(RDA_REG_0B)&(1<<8)))
+ 224   1      //  {
+ 225   1      //    Uart0_Send_nData("FM_SUCC", 7);
+ 226   1      //  }
+ 227   1      //  else
+ 228   1      //  {
+ 229   1      //    Uart0_Send_nData("FM_FAIL", 7);
+ 230   1      //  }
+ 231   1        
+ 232   1      }
+ 233          
+ 234          
+ 235          
+ 236          uint16_t RDA5807_Seek_Channel(void)
+ 237          {
+ 238   1        uint16_t temp;
+ 239   1        unsigned int reg[4] = {0x0000,0x0000};
+ 240   1      
+C51 COMPILER V9.52.0.0   RDA5807                                                           07/24/2018 11:06:13 PAGE 5   
+
+ 241   1        uint8_t reg_data[4] = {0};
+ 242   1      
+ 243   1      //  temp = RDA5807_Read_REG(RDA_REG_02);
+ 244   1      //  temp |=  (1<<8);
+ 245   1      
+ 246   1      //  reg[0]= temp;
+ 247   1        reg[0] = Rda5807Reg[0]|(3<<8);    //向上搜索、开启搜索控制
+ 248   1        reg[1] = Rda5807Reg[1]&(1<<4);    //启用调谐
+ 249   1      
+ 250   1        _RDA_Write_REG(reg, 2);
+ 251   1      
+ 252   1        while((RDA5807_Read_REG(RDA_REG_0A)&(1<<14)) == 0) //等待STC完成
+ 253   1        {
+ 254   2          Delay_ms(30);
+ 255   2        }
+ 256   1        
+ 257   1        temp = RDA5807_Read_REG(RDA_REG_0A)&0x03FF + 870;    //读低9位的频率
+ 258   1        return temp;
+ 259   1      }
+ 260          
+ 261          
+ 262          
+ 263          uint8_t RDA5807_Auto_Search(void)
+ 264          {
+ 265   1        unsigned int rd_reg[2];
+ 266   1        
+ 267   1        do
+ 268   1        {
+ 269   2      //    Uart0_Send_nData("WAITSTC", 7);
+ 270   2          _RDA_Read_Reg(rd_reg, 1);
+ 271   2        }
+ 272   1        while(!(rd_reg[0]&0x4000));//等待STC完成
+ 273   1        
+ 274   1        _RDA_Read_Reg(rd_reg, 2);
+ 275   1        
+ 276   1        if(rd_reg[1]&0x0100) //电台
+ 277   1        {
+ 278   2      //    Uart0_Send_nData("ISFM", 4);
+ 279   2          if((rd_reg[1]>>9)>9)//&&(fm_current_freq!=9600)) 
+ 280   2          {
+ 281   3            return 1; //rda5830_reg.value>>9:rssi max:0x7f
+ 282   3          }
+ 283   2        }
+ 284   1      //  freq = RDA5807_Seek_Channel();
+ 285   1      //  
+ 286   1      //  if((RDA5807_Read_REG(RDA_REG_0B)&(1<<8)))
+ 287   1      //  {//当前频道是电台
+ 288   1      //    return 1;
+ 289   1      //  }
+ 290   1      //  
+ 291   1      ////  if((RDA5807_Read_REG(RDA_REG_0B)&(1<<8)))
+ 292   1      //  
+ 293   1        return 0;
+ 294   1        
+ 295   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    782    ----
+   CONSTANT SIZE    =     98    ----
+   XDATA SIZE       =      8      50
+   PDATA SIZE       =   ----    ----
+C51 COMPILER V9.52.0.0   RDA5807                                                           07/24/2018 11:06:13 PAGE 6   
+
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,1 @@
+"poweroff_memory.c" ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\poweroff_memory.lst) TABS (2) OBJECT(.\hex\poweroff_memory.obj)

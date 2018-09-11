@@ -1,0 +1,101 @@
+C51 COMPILER V9.51   PWM                                                                   06/27/2017 19:07:09 PAGE 1   
+
+
+C51 COMPILER V9.51, COMPILATION OF MODULE PWM
+OBJECT MODULE PLACED IN .\hex\pwm.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\..\Library\Sources\pwm.c ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\
+                    -lst\pwm.lst) TABS(2) OBJECT(.\hex\pwm.obj)
+
+line level    source
+
+   1          #ifndef _PWM_C_
+   2          #define _PWM_C_
+   3          
+   4          /*********************************************************************************************************
+             -************/
+   5          #include "ca51f_config.h"
+   6          #if (IC_TYPE == IC_TYPE_CA51F2X)
+   7          #include "../../includes/ca51f2sfr.h"
+   8          #include "../../includes/ca51f2xsfr.h"
+   9          #include "../../includes/gpiodef_f2.h"
+  10          #elif (IC_TYPE == IC_TYPE_CA51F3X)
+              #include "../../includes/ca51f3sfr.h"
+              #include "../../includes/ca51f3xsfr.h"
+              #include "../../includes/gpiodef_f3.h"
+              #endif
+  15          #include "../../includes/system.h"
+  16          #include "../../Library/includes/uart.h"
+  17          #include "../../Library/includes/pwm.h"
+  18          #include <intrins.h>
+  19          /*********************************************************************************************************
+             -************/
+  20          
+  21          void PWM_init(PWM_Channel_TypeDef pwm_ch,
+  22                        PWM_AlignMod_TypeDef AlignMod,
+  23                        PWM_CKS_TypeDef cks,
+  24                        PWM_Toggle_TypeDef toggle,
+  25                        unsigned char Prescal,
+  26                        PWM_Complementary_TypeDef Comp)
+  27          {
+  28   1        INDEX = pwm_ch;
+  29   1        if(pwm_ch & 0x01) //PWM1,PWM3,PWM5,PWM7
+  30   1        {
+  31   2          PWMCON = (PWMCON&0xF0) | MS(AlignMod) | MOD(Comp);
+  32   2          PWMCFG = TOG(toggle) | Prescal;   
+  33   2        }
+  34   1        else              //PWM0,PWM2,PWM4,PWM6
+  35   1        {
+  36   2          PWMCON = (PWMCON&0xF0) | MS(AlignMod) | CKS(cks);
+  37   2          PWMCFG = TOG(toggle) | Prescal;   
+  38   2        }
+  39   1      }
+  40          void PWM_CfgDivDuty(PWM_Channel_TypeDef pwm_ch,unsigned int DIV,unsigned int DUT)
+  41          {
+  42   1        INDEX = pwm_ch;
+  43   1        PWMDIVH = (unsigned char)(DIV>>8);
+  44   1        PWMDIVL = (unsigned char)(DIV);
+  45   1        PWMDUTH = (unsigned char)(DUT>>8);
+  46   1        PWMDUTL = (unsigned char)(DUT); 
+  47   1      }
+  48          void PWM_Update(unsigned char PWMCH_Bits)
+  49          {
+  50   1        PWMUPD = PWMCH_Bits;
+  51   1      }
+  52          void WaitPWMUpdateComplete(void)
+C51 COMPILER V9.51   PWM                                                                   06/27/2017 19:07:09 PAGE 2   
+
+  53          {
+  54   1        while(PWMUPD);
+  55   1      }
+  56          void PWM_EnContrl(unsigned char PWMEn_Bits)
+  57          {
+  58   1        PWMEN = PWMEn_Bits;
+  59   1      }
+  60          void PWM_InterruptCfg(PWM_Channel_TypeDef pwm_ch,
+  61                                PWM_TIE_TypeDef tie,
+  62                                PWM_ZIE_TypeDef zie,
+  63                                PWM_PIE_TypeDef pie,
+  64                                PWM_NIE_TypeDef nie,
+  65                                unsigned char pwmcmax
+  66                                )
+  67          {
+  68   1        INDEX = pwm_ch;
+  69   1        PWMCON = (PWMCON&0x0F) | TIE(tie) | ZIE(zie) | PIE(pie) | NIE(nie);
+  70   1        PWMCMAX = pwmcmax;
+  71   1      }
+  72          
+  73          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    116    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----      12
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

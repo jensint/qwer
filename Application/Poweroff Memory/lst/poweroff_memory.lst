@@ -1,0 +1,165 @@
+C51 COMPILER V9.51   POWEROFF_MEMORY                                                       07/01/2017 10:29:04 PAGE 1   
+
+
+C51 COMPILER V9.51, COMPILATION OF MODULE POWEROFF_MEMORY
+OBJECT MODULE PLACED IN .\hex\poweroff_memory.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE poweroff_memory.c ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\powero
+                    -ff_memory.lst) TABS(2) OBJECT(.\hex\poweroff_memory.obj)
+
+line level    source
+
+   1          #ifndef _POWEROFF_MEMORY_C_
+   2          #define _POWEROFF_MEMORY_C_
+   3          
+   4          /*********************************************************************************************************
+             -************/
+   5          #include "ca51f_config.h"
+   6          #if (IC_TYPE == IC_TYPE_CA51F2X)
+              #include "../../includes/ca51f2sfr.h"
+              #include "../../includes/ca51f2xsfr.h"
+              #include "../../includes/gpiodef_f2.h"
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+  11          #include "../../includes/ca51f3sfr.h"
+  12          #include "../../includes/ca51f3xsfr.h"
+  13          #include "../../includes/gpiodef_f3.h"
+  14          #endif
+  15          #include "../../includes/system.h"
+  16          #include "../../Library/includes/uart.h"
+  17          #include "../../Library/includes/flash.h"
+  18          #include "poweroff_memory.h"
+  19          #include <intrins.h>
+  20          /*********************************************************************************************************
+             -************/
+  21          /*********************************************************************************************************
+             -*********
+  22          ËµÃ÷£º
+  23          ÔÚ±¾Ó¦ÓÃÊ¾ÀýÖÐ£¬»®·ÖFLASHµÄ×îºóÒ»¿é£¨256×Ö½Ú£©ÎªÊý¾Ý¿Õ¼ä,NeedMemoryDataÊÇµôµçÐèÒª±£´æµÄ10×Ö½ÚÊý¾Ý£¬³õÊ¼ÖµÎ
+             -ª1~10£¬Ã¿´Î
+  24          NeedMemoryDataÊý×éÊý¾Ý¸Ä±äÊ±£¬Í¬Ê±¸üÐÂµ½Êý¾Ý¿Õ¼ä¡£ÏÂ´ÎÖØÉÏµçÊ±´ÓÊý¾Ý¿Õ¼ä¼ÓÔØÊý¾Ýµ½NeedMemoryDataÊý×é£¬´ÓÃæ
+             -ÊµÏÖµôµç¼ÇÒä¹¦ÄÜ¡£
+  25          
+  26          **********************************************************************************************************
+             -*********/
+  27          unsigned char NeedMemoryData[10];
+  28          void MemoryDataWrite(void)
+  29          {
+  30   1        unsigned char DataAreaBuf[12];
+  31   1        DataAreaBuf[0] = 0xAA;      //ÌîÐ´±êÖ¾×Ö£¬µ±Êý¾Ý¿Õ¼äµØÖ·0¡¢1µÄÊý¾ÝÎª0xAA55Ê±£¬ ±íÊ¾Êý¾Ý¿Õ¼äµÄÊý¾ÝÊÇÓÃ»§Ð´Èëµ
+             -Ä£¬Êý¾ÝÓÐÐ§¡£
+  32   1        DataAreaBuf[1] = 0x55;      
+  33   1      
+  34   1        DataAreaBuf[2] = NeedMemoryData[0];     //ÌîÐ´µôµçÐèÒª±£´æµÄÊý¾Ý
+  35   1        DataAreaBuf[3] = NeedMemoryData[1];
+  36   1        DataAreaBuf[4] = NeedMemoryData[2];
+  37   1        DataAreaBuf[5] = NeedMemoryData[3];
+  38   1        DataAreaBuf[6] = NeedMemoryData[4];
+  39   1        DataAreaBuf[7] = NeedMemoryData[5];
+  40   1        DataAreaBuf[8] = NeedMemoryData[6];
+  41   1        DataAreaBuf[9] = NeedMemoryData[7];
+  42   1        DataAreaBuf[10] = NeedMemoryData[8];
+  43   1        DataAreaBuf[11] = NeedMemoryData[9];
+  44   1      
+  45   1        Data_Area_Sector_Erase(0);              //²Á³ýÊý¾Ý¿Õ¼äµÚÒ»¸öÉÈÇø£¬×¢Òâ£ºÉÈÇøºÅ¶ÔÓ¦µÄÊÇÊý¾Ý¿Õ¼äµÄÉÈÇøºÅ£¬²»ÊÇÕû¸ö
+             -FLASH¿Õ¼äµÄÉÈÇøºÅ
+  46   1        Data_Area_Mass_Write(0,DataAreaBuf,12); //Ð´ÈëÊý¾Ý
+C51 COMPILER V9.51   POWEROFF_MEMORY                                                       07/01/2017 10:29:04 PAGE 2   
+
+  47   1      }
+  48          void MemoryDataRead(void)
+  49          {
+  50   1        unsigned char  DataAreaBuf[12];
+  51   1      
+  52   1        Data_Area_Mass_Read(0,DataAreaBuf,12);  //¶ÁÈ¡±£´æµÄÊý¾Ý
+  53   1      
+  54   1        NeedMemoryData[0] = DataAreaBuf[2];     //°Ñ¶ÁÈ¡µÄÊý¾Ý×°ÔØµ½±äÁ¿
+  55   1        NeedMemoryData[1] = DataAreaBuf[3];
+  56   1        NeedMemoryData[2] = DataAreaBuf[4];
+  57   1        NeedMemoryData[3] = DataAreaBuf[5];
+  58   1        NeedMemoryData[4] = DataAreaBuf[6];
+  59   1        NeedMemoryData[5] = DataAreaBuf[7];
+  60   1        NeedMemoryData[6] = DataAreaBuf[8];
+  61   1        NeedMemoryData[7] = DataAreaBuf[9];
+  62   1        NeedMemoryData[8] = DataAreaBuf[10];
+  63   1        NeedMemoryData[9] = DataAreaBuf[11];
+  64   1      }
+  65          
+  66          void PoweroffMemory_init(void)
+  67          {
+  68   1        unsigned char  DataAreaBuf[2];
+  69   1        PADRD = FLASH_SIZE*4 - 1;               //»®·ÖÊý¾Ý¿Õ¼ä£¬±¾Àý³Ì»®·ÖFLASH×îºóÒ»¿é£¨256×Ö½Ú£©ÎªÊý¾Ý¿Õ¼ä
+  70   1        Data_Area_Mass_Read(0,DataAreaBuf,2);   //¶ÁÈ¡×´Ì¬×Ö
+  71   1        if((DataAreaBuf[0] != 0xAA)||(DataAreaBuf[1] != 0x55))//Èç¹û×´Ì¬×Ö²»ÊÇ0xAA55,±íÊ¾ÊÇ³õ´ÎÉÏµç£¬ÐèÒª³õÊ¼»¯±ä
+             -Á¿²¢´æÈëÊý¾Ý¿Õ¼ä
+  72   1        {
+  73   2          NeedMemoryData[0] = 1;                //³õÊ¼»¯ÐèÒªµôµç±£´æµÄ±äÁ¿
+  74   2          NeedMemoryData[1] = 2;
+  75   2          NeedMemoryData[2] = 3;
+  76   2          NeedMemoryData[3] = 4;
+  77   2          NeedMemoryData[4] = 5;
+  78   2          NeedMemoryData[5] = 6;
+  79   2          NeedMemoryData[6] = 7;
+  80   2          NeedMemoryData[7] = 8;
+  81   2          NeedMemoryData[8] = 9;
+  82   2          NeedMemoryData[9] = 10; 
+  83   2      
+  84   2          MemoryDataWrite();        //Ð´Èë×´Ì¬×ÖºÍÐèµôµç´æ´¢µÄ±äÁ¿µ½Êý¾Ý¿Õ¼ä
+  85   2        }
+  86   1        else
+  87   1        {
+  88   2          MemoryDataRead();         //Èç¹û²»ÊÇ³õ´ÎÉÏµç£¬´ÓÊý¾Ý¿Õ¼äÖ±½Ó¶ÁÈ¡Êý¾Ý²¢¸³Öµ¸øÐèµôµç´æ´¢µÄ±äÁ¿
+  89   2        }
+  90   1      }
+  91          void PoweroffMemory_MainLoop(void)
+  92          {
+  93   1        unsigned char i;
+  94   1        PoweroffMemory_init();      //³õÊ¼»¯µôµç´æ´¢¹¦ÄÜ
+  95   1        
+  96   1        
+  97   1      /*********************************************************************************************************
+             -***************
+  98   1      µ±ÐèÒªµôµç´æ´¢µÄ±äÁ¿ÊýÖµ¸Ä±äÊ±£¬ÐèÒªÍ¬Ê±¸üÐÂµ½Êý¾Ý¿Õ¼ä£¬ÔÚ±¾Àý³ÌÖÐ£¬Ã¿´ÎÉÏµçÐèÒªµôµç´æ´¢µÄÊý¾Ý¼ÓÒ»µÝÔö¡£  
+  99   1      **********************************************************************************************************
+             -****************/
+ 100   1        for(i = 0; i < 10; i++)
+ 101   1        {
+ 102   2          NeedMemoryData[i]++;
+ 103   2        }
+ 104   1        MemoryDataWrite();  
+ 105   1      /*********************************************************************************************************
+C51 COMPILER V9.51   POWEROFF_MEMORY                                                       07/01/2017 10:29:04 PAGE 3   
+
+             -***************/
+ 106   1        
+ 107   1      #ifdef PRINT_EN
+ 108   1        uart_printf("NeedMemoryData[0] = 0x%x\n",(unsigned int)NeedMemoryData[0]);
+ 109   1        uart_printf("NeedMemoryData[1] = 0x%x\n",(unsigned int)NeedMemoryData[1]);
+ 110   1        uart_printf("NeedMemoryData[2] = 0x%x\n",(unsigned int)NeedMemoryData[2]);
+ 111   1        uart_printf("NeedMemoryData[3] = 0x%x\n",(unsigned int)NeedMemoryData[3]);
+ 112   1        uart_printf("NeedMemoryData[4] = 0x%x\n",(unsigned int)NeedMemoryData[4]);
+ 113   1        uart_printf("NeedMemoryData[5] = 0x%x\n",(unsigned int)NeedMemoryData[5]);
+ 114   1        uart_printf("NeedMemoryData[6] = 0x%x\n",(unsigned int)NeedMemoryData[6]);
+ 115   1        uart_printf("NeedMemoryData[7] = 0x%x\n",(unsigned int)NeedMemoryData[7]);
+ 116   1        uart_printf("NeedMemoryData[8] = 0x%x\n",(unsigned int)NeedMemoryData[8]);
+ 117   1        uart_printf("NeedMemoryData[9] = 0x%x\n",(unsigned int)NeedMemoryData[9]);
+ 118   1      #endif  
+ 119   1          
+ 120   1        while(1)
+ 121   1        {
+ 122   2      
+ 123   2        }
+ 124   1      }
+ 125          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    349    ----
+   CONSTANT SIZE    =    260    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     10      26
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

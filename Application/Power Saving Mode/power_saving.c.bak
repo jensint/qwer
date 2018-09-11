@@ -1,0 +1,60 @@
+#ifndef _WATCH_DOG_C_
+#define _WATCH_DOG_C_
+
+/*********************************************************************************************************************/
+#include "ca51f_config.h"
+#if (IC_TYPE == IC_TYPE_CA51F2X)
+#include "../../includes/ca51f2sfr.h"
+#include "../../includes/ca51f2xsfr.h"
+#include "../../includes/gpiodef_f2.h"
+#elif (IC_TYPE == IC_TYPE_CA51F3X)
+#include "../../includes/ca51f3sfr.h"
+#include "../../includes/ca51f3xsfr.h"
+#include "../../includes/gpiodef_f3.h"
+#endif
+#include "../../includes/system.h"
+#include "../../Library/includes/uart.h"
+#include "../../Library/includes/stop_idle.h"
+#include "../../Library/includes/system_clock.h"
+#include "power_saving.h"
+#include <intrins.h>
+/*********************************************************************************************************************/
+
+void PowerSaving_MainLoop(void)
+{
+#if (POWER_SAVING_MODE == STOP_MODE)
+	I2CCON = 0;
+	CKCON = 0;
+	MECON |= BIT6;
+	ADCON = 1;
+	PWCON = (PWCON&0xF0) | 0x04;		
+	
+	while(!CheckStopCondition());
+	StopEnter();
+	PWCON = (PWCON&0xF0) | 0x0B;		
+	while(1)
+	{
+		
+	}
+#elif (POWER_SAVING_MODE == IDLE_MODE)
+	I2CCON = 0;
+	CKCON = 0;
+	MECON |= BIT6;
+	ADCON = 1;
+	PWCON = (PWCON&0xF0) | 0x04;	
+	
+	while(!CheckIdleCondition());
+	Sys_Clk_Set_XOSCL();
+//	Sys_Clk_Set_IRCL();
+	IdleEnter();
+	PWCON = (PWCON&0xF0) | 0x0B;	
+	while(1)
+	{
+		
+	}
+#elif (POWER_SAVING_MODE == LOW_SPEED_MODE)
+
+#endif
+	
+}
+#endif

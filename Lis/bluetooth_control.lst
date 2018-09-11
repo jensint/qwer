@@ -1,0 +1,369 @@
+C51 COMPILER V9.52.0.0   BLUETOOTH_CONTROL                                                 07/24/2018 11:06:12 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE BLUETOOTH_CONTROL
+OBJECT MODULE PLACED IN .\Output\bluetooth_control.obj
+COMPILER INVOKED BY: E:\Keil\C51\BIN\C51.EXE User\bluetooth_control.c LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User
+                    -;.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\bluetooth_control.lst) TABS(2) OBJECT(.\Output\blu
+                    -etooth_control.obj)
+
+line level    source
+
+   1          #ifndef _BLUETOOTH_CONTROL_C_
+   2          #define _BLUETOOTH_CONTROL_C_
+   3          
+   4          #include <string.h>
+   5          #include "bluetooth_control.h"
+   6          
+   7          #define AT_CMD_SIZE    7
+   8          
+   9          
+  10          BT_UART_STATE xdata BT_Uart;
+  11          uint8_t BT_Operating_State = BT_IDEL;
+  12          uint8_t BT_Inti_Flag = 0;
+  13          
+  14          void Mcu_SendCmdToBT(BT_CMD Cmd)
+  15          {
+  16   1        uint8_t xdata btcmdbuf[8] = {0};
+  17   1        uint8_t xdata btcmdlen = 0;
+  18   1      
+  19   1        switch(Cmd)
+  20   1        {
+  21   2      //    case 0:
+  22   2      //      memcpy((void*)&btcmdbuf[0], (void*)"at+moda", 7);
+  23   2      //      btcmdlen = 7;
+  24   2      //    break;
+  25   2      //      
+  26   2      //    case 1:
+  27   2      //      memcpy((void*)&btcmdbuf[0], (void*)"at+modb", 7);
+  28   2      //      btcmdlen = 7;
+  29   2      //      break;
+  30   2            
+  31   2          case CMD_BT:
+  32   2            memcpy((void*)&btcmdbuf[0], (void*)"at+modc", 7);
+  33   2            btcmdlen = 7;
+  34   2            break;
+  35   2            
+  36   2          case CMD_AUX:
+  37   2            memcpy((void*)&btcmdbuf[0], (void*)"at+modd", 7);
+  38   2            btcmdlen = 7;
+  39   2            break;
+  40   2          
+  41   2          case CMD_FM:
+  42   2            memcpy((void*)&btcmdbuf[0], (void*)"at+mode", 7);
+  43   2            btcmdlen = 7;
+  44   2            break;
+  45   2          
+  46   2          case CMD_CLOCK:
+  47   2            memcpy((void*)&btcmdbuf[0], (void*)"at+modf", 7);
+  48   2            btcmdlen = 7;
+  49   2            break;
+  50   2            
+  51   2          case CMD_PREV:
+  52   2            memcpy((void*)&btcmdbuf[0], (void*)"at+prev", 7);
+  53   2            btcmdlen = 7;
+C51 COMPILER V9.52.0.0   BLUETOOTH_CONTROL                                                 07/24/2018 11:06:12 PAGE 2   
+
+  54   2            break;
+  55   2          
+  56   2          case CMD_VOLUME:
+  57   2            memcpy((void*)&btcmdbuf[0], (void*)"at+vol", 6);
+  58   2            btcmdbuf[6] = sys_state.Volume;
+  59   2            btcmdlen = 7;
+  60   2            break;
+  61   2            
+  62   2          case CMD_NEXT:
+  63   2            memcpy((void*)&btcmdbuf[0], (void*)"at+next", 7);
+  64   2            btcmdlen = 7;
+  65   2            break;
+  66   2            
+  67   2          case CMD_PLAYPUSE:
+  68   2            memcpy((void*)&btcmdbuf[0], (void*)"at+play", 7);
+  69   2            btcmdlen = 7;
+  70   2            break;
+  71   2          
+  72   2          case CMD_SIRI:
+  73   2            memcpy((void*)&btcmdbuf[0], (void*)"at+siri", 7);
+  74   2            btcmdlen = 7;
+  75   2            break;
+  76   2            
+  77   2          case CMD_ACCEPTCALL:
+  78   2            memcpy((void*)&btcmdbuf[0], (void*)"at+acce", 7);
+  79   2            btcmdlen = 7;
+  80   2            break;
+  81   2          
+  82   2          case CMD_REJECTCALL:
+  83   2            memcpy((void*)&btcmdbuf[0], (void*)"at+reje", 7);
+  84   2            btcmdlen = 7;
+  85   2            break;
+  86   2            
+  87   2          case CMD_RECALL:
+  88   2            memcpy((void*)&btcmdbuf[0], (void*)"at+call", 7);
+  89   2            btcmdlen = 7;
+  90   2            break;
+  91   2            
+  92   2          case CMD_DISCONNECT:
+  93   2            memcpy((void*)&btcmdbuf[0], (void*)"at+disc", 7);
+  94   2            btcmdlen = 7;
+  95   2            break;
+  96   2          
+  97   2          case CMD_TWS:
+  98   2            memcpy((void*)&btcmdbuf[0], (void*)"at+ttws", 7);
+  99   2            btcmdlen = 7;
+ 100   2            break;
+ 101   2            
+ 102   2          case CMD_RING1:
+ 103   2            memcpy((void*)&btcmdbuf[0], (void*)"at+rin1", 7);
+ 104   2            btcmdlen = 7;
+ 105   2            break;
+ 106   2          
+ 107   2          case CMD_RING2:
+ 108   2            memcpy((void*)&btcmdbuf[0], (void*)"at+rin2", 7);
+ 109   2            btcmdlen = 7;
+ 110   2            break;
+ 111   2          
+ 112   2          default:
+ 113   2            break;
+ 114   2        }
+ 115   1        
+C51 COMPILER V9.52.0.0   BLUETOOTH_CONTROL                                                 07/24/2018 11:06:12 PAGE 3   
+
+ 116   1      //  Uart0_Send_nData(btcmdbuf, btcmdlen);
+ 117   1              
+ 118   1      }
+ 119          
+ 120          
+ 121          uint8_t Mcu_RcvBTCmd(uint8_t Rx_Data)
+ 122          {
+ 123   1          static uint8_t xdata Rx_Index = 0;
+ 124   1          static uint8_t xdata Cmd_Len =0;
+ 125   1        
+ 126   1          if(BT_Uart.Rx_Timeout == 0)
+ 127   1          {
+ 128   2              Rx_Index = 0;
+ 129   2              Cmd_Len = 0;
+ 130   2          }
+ 131   1      
+ 132   1          BT_Uart.Rx_Timeout = RX_TIMEOUT_TIME;
+ 133   1          
+ 134   1          switch(Rx_Index)
+ 135   1          {
+ 136   2              case 0:
+ 137   2                if(Rx_Data == 'a')
+ 138   2                  Rx_Index = 1;
+ 139   2                break;
+ 140   2                
+ 141   2              case 1:
+ 142   2                if(Rx_Data == 't')
+ 143   2                  Rx_Index = 2;
+ 144   2                else
+ 145   2                  Rx_Index = 0;
+ 146   2                break;
+ 147   2                
+ 148   2              case 2:
+ 149   2                if(Rx_Data == '+')
+ 150   2                {
+ 151   3                  Rx_Index = 3;
+ 152   3                  Cmd_Len = 0;
+ 153   3                }
+ 154   2                else
+ 155   2                  Rx_Index = 0;
+ 156   2                break;
+ 157   2                
+ 158   2              case 3:
+ 159   2                BT_Uart.gBTCmd[Cmd_Len] = Rx_Data;
+ 160   2                Cmd_Len++;
+ 161   2                if(Cmd_Len >= 4)
+ 162   2                {              
+ 163   3                    Rx_Index = 0;
+ 164   3                    return 1;
+ 165   3                }
+ 166   2                break;
+ 167   2              
+ 168   2              default:
+ 169   2                Rx_Index = 0;
+ 170   2                break;
+ 171   2          }
+ 172   1          return 0;
+ 173   1      }
+ 174          
+ 175          
+ 176          void BT_CmdProcess(void)
+ 177          {
+C51 COMPILER V9.52.0.0   BLUETOOTH_CONTROL                                                 07/24/2018 11:06:12 PAGE 4   
+
+ 178   1        if(BT_Uart.BTCmdRcvFinishFlag == 0)
+ 179   1        {
+ 180   2          return;
+ 181   2        }
+ 182   1        BT_Uart.BTCmdRcvFinishFlag = 0;
+ 183   1        
+ 184   1        if(memcmp(BT_Uart.gBTCmd, "moda", 4) == 0)
+ 185   1        {
+ 186   2          BT_Uart.BTCmdResendFlag = 0;
+ 187   2        }
+ 188   1        else if(memcmp(BT_Uart.gBTCmd, "modb", 4) == 0)
+ 189   1        {
+ 190   2          BT_Uart.BTCmdResendFlag = 0;
+ 191   2        }
+ 192   1        else if(memcmp(BT_Uart.gBTCmd, "modc", 4) == 0)
+ 193   1        {
+ 194   2          BT_Uart.BTCmdResendFlag = 0;
+ 195   2          
+ 196   2        }
+ 197   1        else if(memcmp(BT_Uart.gBTCmd, "modd", 4) == 0)
+ 198   1        {
+ 199   2          BT_Uart.BTCmdResendFlag = 0;
+ 200   2        } 
+ 201   1        else if(memcmp(BT_Uart.gBTCmd, "mode", 4) == 0)
+ 202   1        {//FM
+ 203   2          BT_Uart.BTCmdResendFlag = 0;
+ 204   2          FM_Freq_LED_Display(sys_state.FMFreq);
+ 205   2          FM_INIT_COUNNT = 100;
+ 206   2          FM_INIT_STATE = 1;
+ 207   2        }
+ 208   1        else if(memcmp(BT_Uart.gBTCmd, "modf", 4) == 0)
+ 209   1        {
+ 210   2          BT_Uart.BTCmdResendFlag = 0;
+ 211   2        } 
+ 212   1        else if(memcmp(BT_Uart.gBTCmd, "prev", 4) == 0)
+ 213   1        {
+ 214   2          BT_Uart.BTCmdResendFlag = 0;
+ 215   2        }
+ 216   1        else if(memcmp(BT_Uart.gBTCmd, "next", 4) == 0)
+ 217   1        {
+ 218   2          BT_Uart.BTCmdResendFlag = 0;
+ 219   2        }
+ 220   1        else if(memcmp(BT_Uart.gBTCmd, "disc", 4) == 0)
+ 221   1        {
+ 222   2          BT_Operating_State = BT_DISCONNECT;
+ 223   2        }
+ 224   1        else if(memcmp(BT_Uart.gBTCmd, "conn", 4) == 0)
+ 225   1        {
+ 226   2          BT_Operating_State = BT_CONNECT;
+ 227   2        }
+ 228   1        else if(memcmp(BT_Uart.gBTCmd, "play", 4) == 0)
+ 229   1        {
+ 230   2          BT_Uart.BTCmdResendFlag = 0;
+ 231   2        }
+ 232   1        else if(memcmp(BT_Uart.gBTCmd, "paus", 4) == 0)
+ 233   1        {
+ 234   2      
+ 235   2        }
+ 236   1        else if(memcmp(BT_Uart.gBTCmd, "siri", 4) == 0)
+ 237   1        {
+ 238   2      
+ 239   2        }
+C51 COMPILER V9.52.0.0   BLUETOOTH_CONTROL                                                 07/24/2018 11:06:12 PAGE 5   
+
+ 240   1        else if(memcmp(BT_Uart.gBTCmd, "call", 4) == 0)
+ 241   1        {
+ 242   2          BT_Uart.BTCmdResendFlag = 0;
+ 243   2        }
+ 244   1        else if(memcmp(BT_Uart.gBTCmd, "tele", 4) == 0)
+ 245   1        {
+ 246   2      
+ 247   2        }
+ 248   1        else if(memcmp(BT_Uart.gBTCmd, "star", 4) == 0)
+ 249   1        {
+ 250   2          BT_Inti_Flag = 1;
+ 251   2          if(sys_state.Mode == SYS_BLUETOOTH)
+ 252   2          {
+ 253   3            BT_Uart.BTCmd_Temp = CMD_BT;
+ 254   3          } 
+ 255   2          else if(sys_state.Mode == SYS_AUX)
+ 256   2          {
+ 257   3            BT_Uart.BTCmd_Temp = CMD_AUX;
+ 258   3          }
+ 259   2          else if(sys_state.Mode == SYS_FM)
+ 260   2          {
+ 261   3            BT_Uart.BTCmd_Temp = CMD_FM;  
+ 262   3          }
+ 263   2          else if(sys_state.Mode == SYS_CLOCK)
+ 264   2          {
+ 265   3            BT_Uart.BTCmd_Temp = CMD_CLOCK;
+ 266   3          }
+ 267   2          else if(sys_state.Mode == SYS_ALARM1 || sys_state.Mode == SYS_ALARM2)
+ 268   2          {
+ 269   3            BT_Uart.BTCmd_Temp = CMD_CLOCK;
+ 270   3          }   
+ 271   2          BT_Uart.BTCmdResendFlag = 1;
+ 272   2          BT_Uart.BT_Init_Count = 0;  
+ 273   2        }
+ 274   1        else if(memcmp(BT_Uart.gBTCmd, "mute", 4) == 0)
+ 275   1        {
+ 276   2          if(sys_state.Mode == SYS_FM)
+ 277   2          {
+ 278   3            Mode_Init_Flag = 1;
+ 279   3          }
+ 280   2          if(BT_Inti_Flag)
+ 281   2      //    if((CMD_VOLUME < MAX_VOLUME) && (CMD_VOLUME > 0))
+ 282   2          {
+ 283   3            BT_Inti_Flag = 0;
+ 284   3      //      Mcu_SendCmdToBT(CMD_VOLUME);
+ 285   3            BT_Uart.BTCmd_Temp = CMD_VOLUME;
+ 286   3            BT_Uart.BTCmdResendFlag = 1;
+ 287   3      //      BT_Uart.BT_Init_Count = 0;
+ 288   3          }
+ 289   2          
+ 290   2          if(Alarm_Ring_Flag)
+ 291   2          {
+ 292   3            BT_Uart.BTCmd_Temp = CMD_RING1;
+ 293   3            BT_Uart.BTCmdResendFlag = 1;
+ 294   3          } 
+ 295   2          
+ 296   2        } 
+ 297   1        else if(memcmp(BT_Uart.gBTCmd, "batt", 4) == 0)
+ 298   1        {//µÍµçÁ¿
+ 299   2          sys_state.Power = SYS_POWER_SLEEP;
+ 300   2          LED_Display_Off();
+ 301   2          BT_Power_Ctrl(BT_POWER_OFF);
+C51 COMPILER V9.52.0.0   BLUETOOTH_CONTROL                                                 07/24/2018 11:06:12 PAGE 6   
+
+ 302   2          Enter_Sleep_Conf();
+ 303   2        }
+ 304   1        else if(memcmp(BT_Uart.gBTCmd, "vol", 3) == 0)
+ 305   1        {
+ 306   2          BT_Uart.BTCmdResendFlag = 0;
+ 307   2        }
+ 308   1        else if(memcmp(BT_Uart.gBTCmd, "rin1", 4) == 0)
+ 309   1        {
+ 310   2          BT_Uart.BTCmdResendFlag = 0;
+ 311   2        }
+ 312   1        else if(memcmp(BT_Uart.gBTCmd, "rin2", 4) == 0)
+ 313   1        {
+ 314   2          BT_Uart.BTCmdResendFlag = 0;
+ 315   2        }
+ 316   1        else if(memcmp(BT_Uart.gBTCmd, "ttws", 4) == 0)
+ 317   1        {
+ 318   2          BT_Uart.BTCmdResendFlag = 0;
+ 319   2        }
+ 320   1      }
+ 321          
+ 322          
+ 323          void BTCmd_Resend(void)
+ 324          {
+ 325   1        if(BT_Uart.BT_Init_Count >= 80 && BT_Uart.BTCmdResendFlag && BT_Uart.BTCmdResendTime_count >= 5)
+ 326   1        {  
+ 327   2          Mcu_SendCmdToBT(BT_Uart.BTCmd_Temp);
+ 328   2          BT_Uart.BTCmdResendTime_count = 0;
+ 329   2        }
+ 330   1      }
+ 331          
+ 332          
+ 333          #endif
+ 334          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1199    ----
+   CONSTANT SIZE    =    244    ----
+   XDATA SIZE       =     18       9
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

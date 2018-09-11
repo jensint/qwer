@@ -1,0 +1,705 @@
+C51 COMPILER V9.52.0.0   LED_CONTROL                                                       07/24/2018 11:06:12 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE LED_CONTROL
+OBJECT MODULE PLACED IN .\Output\led_control.obj
+COMPILER INVOKED BY: E:\Keil\C51\BIN\C51.EXE User\led_control.c LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\Lib
+                    -rary\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\led_control.lst) TABS(2) OBJECT(.\Output\led_control.obj
+                    -)
+
+line level    source
+
+   1          
+   2          #ifndef _LED_CONTROL_C_
+   3          #define _LED_CONTROL_C_
+   4          
+   5          #include "ca51f_config.h"
+   6          #if (IC_TYPE == IC_TYPE_CA51F2X)
+              #include "../../includes/ca51f2sfr.h"
+              #include "../../includes/ca51f2xsfr.h"
+              #include "../../includes/gpiodef_f2.h"
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+  11          #include "../../includes/ca51f3sfr.h"
+  12          #include "../../includes/ca51f3xsfr.h"
+  13          #include "../../includes/gpiodef_f3.h"
+  14          #endif
+  15          
+  16          #include "../../includes/system.h"
+  17          #include <intrins.h>
+  18          
+  19          #include "led_control.h"
+  20          #include "app_task.h"
+  21          /********************************0****1****2****3****4***5*****6****7***8****9*****A***B*****C***D****E***
+             -***F*************************************************/
+  22          uint8_t code Number_Table[] = {0x3F,0x06,0x5B,0x4F,0x66,0x6D,0x7D,0x07,0x7F,0x6F,0x77,0x7C,0x39,0x5E,0x79,
+             -0x71,0x00};  //0-9,A-F
+  23          uint8_t code Number_VOL = 0x3E;  //LED屏显示"V"
+  24          uint8_t code Number_FMChannel = 0x76;  //LED屏显示"P""0x73"|"H""0x76"
+  25          uint8_t xdata Led_Display_Table[7] = {0};
+  26          
+  27          CLOCK_NUM xdata RTC_Num;  //实时时间值
+  28          CLOCK_NUM xdata Alarm1_Num;  //闹钟1时间
+  29          CLOCK_NUM xdata Alarm2_Num;  //闹钟2时间
+  30          CLOCK_NUM xdata Settime_Num;  //设置的时间
+  31          
+  32          uint8_t xdata Settime_Dis_Count = 0;  //显示设置时间的常亮时间  单位0.5s
+  33          uint8_t xdata Settime_Keeptime_Count = 0;  //设置时间到取消的时限  单位0.5s
+  34          uint8_t xdata SetVolume_Keeptime_Count = 0;  //设置音量显示保持的时限  单位0.5s
+  35          uint8_t ge=0,shi=0,bai=0,qian=0;
+  36          LED_DIS_VALUE xdata Led_Number;  //led显示值
+  37          LED_DIS_STATE xdata Led_Dis_State;  //显示的状态, BT/FM/AUX/MHZ/TIME/PLAY/PUSE
+  38          
+  39          /******************************************************************************
+  40          函数名：  Led_Seg_Display
+  41          功能描述：设置seg上的值
+  42          输入参数: index  显示寄存器编号
+  43                    dat    显示缓存值
+  44          返回值：  无          
+  45          ******************************************************************************/
+  46          void Led_Seg_Display(uint8_t index, uint8_t dat)
+  47          {
+  48   1        INDEX = index;
+  49   1        LXDAT = dat;
+  50   1      }
+  51          
+C51 COMPILER V9.52.0.0   LED_CONTROL                                                       07/24/2018 11:06:12 PAGE 2   
+
+  52          /******************************************************************************
+  53          函数名：  Led_Display
+  54          功能描述：LED屏显示
+  55          输入参数: hour 小时
+  56                    minute 分钟
+  57                    mode 模式
+  58          返回值：  无          
+  59          ******************************************************************************/
+  60          void LED_COUNT(uint8_t mode)
+  61          {
+  62   1        uint8_t count=2;
+  63   1        uint8_t i;
+  64   1        if(ge>9)
+  65   1        {
+  66   2            ge=0;
+  67   2          shi+=1;
+  68   2          if(shi>9)
+  69   2            {
+  70   3                shi=0;
+  71   3                bai+=1;
+  72   3            }
+  73   2          if(bai>9)
+  74   2            {
+  75   3                bai=0;
+  76   3                qian+=1;
+  77   3            }
+  78   2            if(qian>9)
+  79   2            {
+  80   3              ge=0;
+  81   3              shi=0;
+  82   3              bai=0;
+  83   3              qian=0;     
+  84   3            }
+  85   2        }
+  86   1      
+  87   1        
+  88   1          Led_Number.TenDigitsHour = qian;
+  89   1          Led_Number.UnitsDigitHour = bai;
+  90   1          Led_Number.TenDigitsMinute = shi;
+  91   1          Led_Number.UnitsDigitMinute = ge;
+  92   1        
+  93   1          for(i=0; i<7; i++)
+  94   1          {
+  95   2            Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsHour] >> i)&0x01;  //Number_Table[Led_Number.
+             -TenDigitsHour] >> i,显示每一段
+  96   2            Led_Display_Table[i] <<= 1;
+  97   2            Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitHour] >> i)&0x01;
+  98   2            Led_Display_Table[i] <<= 1;
+  99   2            Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsMinute] >> i)&0x01;
+ 100   2            Led_Display_Table[i] <<= 1;
+ 101   2            Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitMinute] >> i)&0x01;
+ 102   2            Led_Display_Table[i] <<= 1; 
+ 103   2          }
+ 104   1          
+ 105   1        if(mode == SYS_BLUETOOTH)
+ 106   1        {
+ 107   2          if(BT_Operating_State == BT_IDEL || BT_Operating_State == BT_DISCONNECT)
+ 108   2          {
+ 109   3            Led_Display_Table[3] |= 1;              //BT图标闪烁
+ 110   3          }
+ 111   2          else
+ 112   2          {
+C51 COMPILER V9.52.0.0   LED_CONTROL                                                       07/24/2018 11:06:12 PAGE 3   
+
+ 113   3            Led_Display_Table[3] |= 1;
+ 114   3          }   
+ 115   2        } 
+ 116   1          
+ 117   1        for(i=0; i<7; i++)
+ 118   1        {
+ 119   2          INDEX = i;
+ 120   2          LXDAT = Led_Display_Table[i];
+ 121   2          Led_Display_Table[i] = 0;
+ 122   2        }
+ 123   1      }
+ 124          
+ 125          void Led_Display(uint8_t hour, uint8_t minute, uint8_t mode)
+ 126          {
+ 127   1        static uint8_t point = 0;
+ 128   1        uint8_t i = 0;
+ 129   1        Led_Number.TenDigitsHour = hour/10;
+ 130   1        Led_Number.UnitsDigitHour = hour%10;
+ 131   1        Led_Number.TenDigitsMinute = minute/10;
+ 132   1        Led_Number.UnitsDigitMinute = minute%10;
+ 133   1        
+ 134   1        for(i=0; i<7; i++)
+ 135   1        {
+ 136   2          Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsHour] >> i)&0x01;  //Number_Table[Led_Number
+             -.TenDigitsHour] >> i,显示每一段
+ 137   2          Led_Display_Table[i] <<= 1;
+ 138   2          Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitHour] >> i)&0x01;
+ 139   2          Led_Display_Table[i] <<= 1;
+ 140   2          Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsMinute] >> i)&0x01;
+ 141   2          Led_Display_Table[i] <<= 1;
+ 142   2          Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitMinute] >> i)&0x01;
+ 143   2          Led_Display_Table[i] <<= 1;  
+ 144   2        }
+ 145   1      
+ 146   1        if(point)
+ 147   1        {
+ 148   2          point = 0;
+ 149   2        }
+ 150   1        else
+ 151   1        {
+ 152   2          point = 1;
+ 153   2        }
+ 154   1      
+ 155   1        Led_Display_Table[4] |= point;  //Led_Display_Table[0-4]:1A,2A,3A,4A,K0
+ 156   1        
+ 157   1        if(mode == SYS_AUX)
+ 158   1        {
+ 159   2          Led_Display_Table[5] |= 1;    //显示AUX图标      
+ 160   2        }
+ 161   1      /***
+ 162   1        else if(mode == SYS_BLUETOOTH)
+ 163   1        {
+ 164   1          if(BT_Operating_State == BT_IDEL || BT_Operating_State == BT_DISCONNECT)
+ 165   1          {
+ 166   1            Led_Display_Table[3] |= point;              //BT图标闪烁
+ 167   1          }
+ 168   1          else
+ 169   1          {
+ 170   1            Led_Display_Table[3] |= 1;
+ 171   1          }
+ 172   1        }
+ 173   1        
+C51 COMPILER V9.52.0.0   LED_CONTROL                                                       07/24/2018 11:06:12 PAGE 4   
+
+ 174   1      ****/
+ 175   1        if(Alarm1_Num.Hour != ALARM_DISABLE || Alarm1_Num.Minute != ALARM_DISABLE)
+ 176   1        { 
+ 177   2          Led_Display_Table[0] |= 1;         //闹钟图标
+ 178   2        }
+ 179   1      
+ 180   1        if(Alarm2_Num.Hour != ALARM_DISABLE || Alarm2_Num.Minute != ALARM_DISABLE)
+ 181   1        {
+ 182   2          Led_Display_Table[1] |= 1;          //  闹钟图标
+ 183   2        }
+ 184   1        
+ 185   1        for(i=0; i<7; i++)
+ 186   1        {
+ 187   2          INDEX = i;
+ 188   2          LXDAT = Led_Display_Table[i];
+ 189   2          Led_Display_Table[i] = 0;
+ 190   2        }
+ 191   1        
+ 192   1      }
+ 193          
+ 194          
+ 195          /******************************************************************************
+ 196          函数名：  Alarm_LED_Display
+ 197          功能描述：显示闹钟的时间
+ 198          输入参数: alarm_style 闹钟1/闹钟2
+ 199          返回值：  无          
+ 200          ******************************************************************************/
+ 201          
+ 202          void Alarm_LED_Display(uint8_t alarm_style)
+ 203          {
+ 204   1        uint8_t i = 0;
+ 205   1        uint8_t xdata hour_num = 0;
+ 206   1        uint8_t xdata minute_num = 0;
+ 207   1         
+ 208   1        if(alarm_style == SYS_ALARM1)
+ 209   1        { 
+ 210   2          if(Alarm1_Num.Hour == ALARM_DISABLE || Alarm1_Num.Minute == ALARM_DISABLE)
+ 211   2          {
+ 212   3            Led_Number.TenDigitsHour = 0x10;   //清屏，不显示
+ 213   3            Led_Number.UnitsDigitHour = 0;   //显示0
+ 214   3            Led_Number.TenDigitsMinute = 0x0f;   //显示F
+ 215   3            Led_Number.UnitsDigitMinute = 0x0f;   //显示F 
+ 216   3          }
+ 217   2          else
+ 218   2          {
+ 219   3            hour_num = Alarm1_Num.Hour;
+ 220   3            minute_num = Alarm1_Num.Minute;
+ 221   3            
+ 222   3            Led_Number.TenDigitsHour = hour_num/10;
+ 223   3            Led_Number.UnitsDigitHour = hour_num%10;
+ 224   3            Led_Number.TenDigitsMinute = minute_num/10;
+ 225   3            Led_Number.UnitsDigitMinute = minute_num%10;
+ 226   3          }
+ 227   2        }
+ 228   1        else if(alarm_style == SYS_ALARM2)
+ 229   1        {
+ 230   2          if(Alarm2_Num.Hour == ALARM_DISABLE || Alarm2_Num.Minute == ALARM_DISABLE)
+ 231   2          {
+ 232   3            Led_Number.TenDigitsHour = 0x10;
+ 233   3            Led_Number.UnitsDigitHour = 0;
+ 234   3            Led_Number.TenDigitsMinute = 0x0f;
+ 235   3            Led_Number.UnitsDigitMinute = 0x0f;
+C51 COMPILER V9.52.0.0   LED_CONTROL                                                       07/24/2018 11:06:12 PAGE 5   
+
+ 236   3          }
+ 237   2          else
+ 238   2          {
+ 239   3            hour_num = Alarm2_Num.Hour;
+ 240   3            minute_num = Alarm2_Num.Minute;
+ 241   3            
+ 242   3            Led_Number.TenDigitsHour = hour_num/10;
+ 243   3            Led_Number.UnitsDigitHour = hour_num%10;
+ 244   3            Led_Number.TenDigitsMinute = minute_num/10;
+ 245   3            Led_Number.UnitsDigitMinute = minute_num%10;
+ 246   3          }
+ 247   2        
+ 248   2        }
+ 249   1        
+ 250   1        for(i=0; i<7; i++)
+ 251   1        {
+ 252   2          Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsHour] >> i)&0x01;
+ 253   2          Led_Display_Table[i] <<= 1;
+ 254   2          Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitHour] >> i)&0x01;
+ 255   2          Led_Display_Table[i] <<= 1;
+ 256   2          Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsMinute] >> i)&0x01;
+ 257   2          Led_Display_Table[i] <<= 1;
+ 258   2          Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitMinute] >> i)&0x01;
+ 259   2          Led_Display_Table[i] <<= 1;
+ 260   2        
+ 261   2        }
+ 262   1        
+ 263   1        if(alarm_style == SYS_ALARM1)
+ 264   1        {
+ 265   2          if(Alarm1_Num.Hour != ALARM_DISABLE && Alarm1_Num.Minute != ALARM_DISABLE)
+ 266   2          {
+ 267   3            Led_Display_Table[4] |= 1;        //显示两点        
+ 268   3          } 
+ 269   2            Led_Display_Table[0] |= 1;          //点亮闹钟图标
+ 270   2        }
+ 271   1        else if(alarm_style == SYS_ALARM2)
+ 272   1        {
+ 273   2          if(Alarm2_Num.Hour != ALARM_DISABLE && Alarm2_Num.Minute != ALARM_DISABLE)
+ 274   2          {
+ 275   3            Led_Display_Table[4] |= 1;
+ 276   3          }
+ 277   2          Led_Display_Table[1] |= 1;
+ 278   2        }
+ 279   1      //  Led_Display_Table[4] |= 1;
+ 280   1      
+ 281   1        
+ 282   1        for(i=0; i<7; i++)
+ 283   1        {
+ 284   2          INDEX = i;
+ 285   2          LXDAT = Led_Display_Table[i];
+ 286   2          Led_Display_Table[i] = 0;
+ 287   2        }
+ 288   1      }
+ 289          
+ 290          /******************************************************************************
+ 291          函数名：  Settime_LED_Display
+ 292          功能描述：显示设置时的时间
+ 293          输入参数: mode 时间/闹钟1/闹钟2
+ 294                    unit 设置位数
+ 295                    flag 闪烁 亮/灭
+ 296          返回值：  无          
+ 297          ******************************************************************************/
+C51 COMPILER V9.52.0.0   LED_CONTROL                                                       07/24/2018 11:06:12 PAGE 6   
+
+ 298          void Settime_LED_Display(uint8_t mode, CLOCK_UNIT unit, uint8_t flag)
+ 299          {
+ 300   1      //  static uint8_t point = 0;
+ 301   1        uint8_t i = 0;
+ 302   1        
+ 303   1        if((mode == SYS_ALARM1 || mode == SYS_ALARM2) && (Settime_Num.Hour == ALARM_DISABLE || Settime_Num.Minute
+             - == ALARM_DISABLE))       //闪烁OFF图标
+ 304   1        {
+ 305   2          Led_Number.TenDigitsHour = 0x10;
+ 306   2          Led_Number.UnitsDigitHour = 0;
+ 307   2          Led_Number.TenDigitsMinute = 0x0f;
+ 308   2          Led_Number.UnitsDigitMinute = 0x0f;
+ 309   2          
+ 310   2      //    if(flag)
+ 311   2      //    {
+ 312   2            if(flag)
+ 313   2            {
+ 314   3              for(i=0; i<7; i++)
+ 315   3              {
+ 316   4                Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsHour] >> i)&0x01;
+ 317   4                Led_Display_Table[i] <<= 1;
+ 318   4                Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitHour] >> i)&0x01;
+ 319   4                Led_Display_Table[i] <<= 1;
+ 320   4                Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsMinute] >> i)&0x01;
+ 321   4                Led_Display_Table[i] <<= 1;
+ 322   4                Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitMinute] >> i)&0x01;
+ 323   4                Led_Display_Table[i] <<= 1;
+ 324   4              }
+ 325   3      
+ 326   3            
+ 327   3              if(mode == SYS_ALARM1)
+ 328   3              {
+ 329   4                Led_Display_Table[0]|=1;
+ 330   4              }
+ 331   3                if(mode == SYS_ALARM2)
+ 332   3              {
+ 333   4                Led_Display_Table[1]|=1;
+ 334   4              }
+ 335   3      
+ 336   3      
+ 337   3              
+ 338   3            }
+ 339   2            else
+ 340   2            {
+ 341   3              for(i=0; i<7; i++)
+ 342   3              {
+ 343   4                Led_Display_Table[i] <<= 4;
+ 344   4              }
+ 345   3            }
+ 346   2      //    }
+ 347   2        }
+ 348   1        else
+ 349   1        {
+ 350   2          Led_Number.TenDigitsHour = Settime_Num.Hour/10;
+ 351   2          Led_Number.UnitsDigitHour = Settime_Num.Hour%10;
+ 352   2          Led_Number.TenDigitsMinute = Settime_Num.Minute/10;
+ 353   2          Led_Number.UnitsDigitMinute = Settime_Num.Minute%10;
+ 354   2        
+ 355   2          if(unit == Unit_Hour)
+ 356   2          {
+ 357   3            if(flag)
+ 358   3            {
+C51 COMPILER V9.52.0.0   LED_CONTROL                                                       07/24/2018 11:06:12 PAGE 7   
+
+ 359   4              for(i=0; i<7; i++)
+ 360   4              {
+ 361   5                Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsHour] >> i)&0x01;
+ 362   5                Led_Display_Table[i] <<= 1;
+ 363   5                Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitHour] >> i)&0x01;
+ 364   5                Led_Display_Table[i] <<= 1;
+ 365   5                Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsMinute] >> i)&0x01;
+ 366   5                Led_Display_Table[i] <<= 1;
+ 367   5                Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitMinute] >> i)&0x01;
+ 368   5                Led_Display_Table[i] <<= 1;
+ 369   5              }
+ 370   4              
+ 371   4            if(mode == SYS_ALARM1)       //     
+ 372   4            {
+ 373   5              Led_Display_Table[0]|=1;
+ 374   5            }
+ 375   4              if(mode == SYS_ALARM2)       //     
+ 376   4            {
+ 377   5              Led_Display_Table[1]|=1;
+ 378   5            } 
+ 379   4              
+ 380   4              
+ 381   4            }
+ 382   3            else
+ 383   3            {
+ 384   4              for(i=0; i<7; i++)
+ 385   4              {
+ 386   5      //        Led_Display_Table[i] |= 0;
+ 387   5      //        Led_Display_Table[i] <<= 1;
+ 388   5      //        Led_Display_Table[i] |= 0;
+ 389   5                Led_Display_Table[i] <<= 2;
+ 390   5                Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsMinute] >> i)&0x01;
+ 391   5                Led_Display_Table[i] <<= 1;
+ 392   5                Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitMinute] >> i)&0x01;
+ 393   5                Led_Display_Table[i] <<= 1;
+ 394   5              }
+ 395   4            } 
+ 396   3          }
+ 397   2          else if(unit ==Unit_Minute)
+ 398   2          {
+ 399   3            if(flag)
+ 400   3            {
+ 401   4              for(i=0; i<7; i++)
+ 402   4              {
+ 403   5                Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsHour] >> i)&0x01;
+ 404   5                Led_Display_Table[i] <<= 1;
+ 405   5                Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitHour] >> i)&0x01;
+ 406   5                Led_Display_Table[i] <<= 1;
+ 407   5                Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsMinute] >> i)&0x01;
+ 408   5                Led_Display_Table[i] <<= 1;
+ 409   5                Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitMinute] >> i)&0x01;
+ 410   5                Led_Display_Table[i] <<= 1;
+ 411   5              }
+ 412   4              
+ 413   4              
+ 414   4                if(mode == SYS_ALARM1)       //     
+ 415   4            {
+ 416   5              Led_Display_Table[0]|=1;
+ 417   5            }
+ 418   4              if(mode == SYS_ALARM2)       //     
+ 419   4            {
+ 420   5              Led_Display_Table[1]|=1;
+C51 COMPILER V9.52.0.0   LED_CONTROL                                                       07/24/2018 11:06:12 PAGE 8   
+
+ 421   5            } 
+ 422   4                                    
+ 423   4            }
+ 424   3            else
+ 425   3            {
+ 426   4              for(i=0; i<7; i++)
+ 427   4              {
+ 428   5                Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsHour] >> i)&0x01;
+ 429   5                Led_Display_Table[i] <<= 1;
+ 430   5                Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitHour] >> i)&0x01;
+ 431   5      //          Led_Display_Table[i] <<= 1;
+ 432   5      //          Led_Display_Table[i] |= 0;
+ 433   5      //          Led_Display_Table[i] <<= 1;
+ 434   5      //          Led_Display_Table[i] |= 0;
+ 435   5                Led_Display_Table[i] <<= 3;
+ 436   5              }
+ 437   4            }
+ 438   3          }
+ 439   2          Led_Display_Table[4] |= 1;
+ 440   2        }
+ 441   1        
+ 442   1      
+ 443   1        
+ 444   1        if(mode == SYS_BLUETOOTH)
+ 445   1        {
+ 446   2          if(BT_Operating_State == BT_IDEL || BT_Operating_State == BT_DISCONNECT)
+ 447   2          {
+ 448   3            if(flag)
+ 449   3            {
+ 450   4              Led_Display_Table[3] |= 1;
+ 451   4            }
+ 452   3            else
+ 453   3            {
+ 454   4              Led_Display_Table[3] |= 0;
+ 455   4            }
+ 456   3          }
+ 457   2          else
+ 458   2          {
+ 459   3            Led_Display_Table[3] |= 1;
+ 460   3          }
+ 461   2        }
+ 462   1        else if(mode == SYS_AUX)
+ 463   1        {
+ 464   2          Led_Display_Table[5] |= 1;
+ 465   2        }
+ 466   1      /********************delece***************************
+ 467   1        ********************************************/
+ 468   1        else if(mode == SYS_ALARM1)
+ 469   1        {
+ 470   2          if((unit == Unit_Null)||(unit ==Unit_Null))
+ 471   2          { 
+ 472   3            if((Settime_Num.Hour != ALARM_DISABLE) || (Settime_Num.Minute != ALARM_DISABLE))    //delece
+ 473   3            {
+ 474   4              Led_Display_Table[0] |= 1;
+ 475   4            }
+ 476   3          }
+ 477   2        }
+ 478   1      
+ 479   1        else if(mode == SYS_ALARM2)
+ 480   1        {
+ 481   2          if((unit == Unit_Null)||(unit ==Unit_Null))
+ 482   2          { 
+C51 COMPILER V9.52.0.0   LED_CONTROL                                                       07/24/2018 11:06:12 PAGE 9   
+
+ 483   3            if((Settime_Num.Hour != ALARM_DISABLE) || (Settime_Num.Minute != ALARM_DISABLE))    //delece
+ 484   3            Led_Display_Table[1] |= 1;
+ 485   3          }
+ 486   2        }
+ 487   1      
+ 488   1        for(i=0; i<7; i++)
+ 489   1        {
+ 490   2          INDEX = i;
+ 491   2          LXDAT = Led_Display_Table[i];
+ 492   2          Led_Display_Table[i] = 0;
+ 493   2        }
+ 494   1      }
+ 495          
+ 496          
+ 497          
+ 498          /******************************************************************************
+ 499          函数名：  Volume_LED_Display
+ 500          功能描述：显示音量
+ 501          输入参数: volume 音量值
+ 502          返回值：  无          
+ 503          ******************************************************************************/
+ 504          void Volume_LED_Display(uint8_t volume)
+ 505          {
+ 506   1        uint8_t i = 0;
+ 507   1        
+ 508   1        Led_Number.TenDigitsMinute = volume/10;
+ 509   1        Led_Number.UnitsDigitMinute = volume%10;
+ 510   1      
+ 511   1        for(i=0; i<7; i++)
+ 512   1        {
+ 513   2          Led_Display_Table[i] |= 0;                //第一位不显示
+ 514   2          Led_Display_Table[i] <<= 1;
+ 515   2          Led_Display_Table[i] |= (Number_VOL >> i)&0x01;
+ 516   2          Led_Display_Table[i] <<= 1;
+ 517   2          Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsMinute] >> i)&0x01;
+ 518   2          Led_Display_Table[i] <<= 1;
+ 519   2          Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitMinute] >> i)&0x01;
+ 520   2          Led_Display_Table[i] <<= 1;
+ 521   2        }
+ 522   1        
+ 523   1        for(i=0; i<7; i++)
+ 524   1        {
+ 525   2          INDEX = i;
+ 526   2          LXDAT = Led_Display_Table[i];
+ 527   2          Led_Display_Table[i] = 0;
+ 528   2        }
+ 529   1      }
+ 530          
+ 531          
+ 532          
+ 533          /******************************************************************************
+ 534          函数名：  Volume_LED_Display
+ 535          功能描述：显示FM当前频率
+ 536          输入参数: freq 频率值
+ 537          返回值：  无          
+ 538          ******************************************************************************/
+ 539          void FM_Freq_LED_Display(uint16_t freq)
+ 540          {
+ 541   1        uint8_t i = 0;
+ 542   1        
+ 543   1        Led_Number.TenDigitsHour = freq/1000;
+ 544   1        Led_Number.UnitsDigitHour = (freq/100)%10;
+C51 COMPILER V9.52.0.0   LED_CONTROL                                                       07/24/2018 11:06:12 PAGE 10  
+
+ 545   1        Led_Number.TenDigitsMinute = (freq%100)/10;
+ 546   1        Led_Number.UnitsDigitMinute = freq%10;
+ 547   1        
+ 548   1        if(Led_Number.TenDigitsHour == 0)
+ 549   1        {
+ 550   2          Led_Number.TenDigitsHour = 0x10;
+ 551   2        }
+ 552   1        
+ 553   1        for(i=0; i<7; i++)
+ 554   1        {
+ 555   2          Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsHour] >> i)&0x01;
+ 556   2          Led_Display_Table[i] <<= 1;
+ 557   2          Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitHour] >> i)&0x01;
+ 558   2          Led_Display_Table[i] <<= 1;
+ 559   2          Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsMinute] >> i)&0x01;
+ 560   2          Led_Display_Table[i] <<= 1;
+ 561   2          Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitMinute] >> i)&0x01;
+ 562   2          Led_Display_Table[i] <<= 1;
+ 563   2        }
+ 564   1        
+ 565   1        Led_Display_Table[2] |= 1;
+ 566   1        Led_Display_Table[6] |= 1;
+ 567   1        
+ 568   1        if(Alarm1_Num.Hour != ALARM_DISABLE || Alarm1_Num.Minute != ALARM_DISABLE)
+ 569   1        {
+ 570   2          Led_Display_Table[0] |= 1;
+ 571   2        }
+ 572   1      
+ 573   1        if(Alarm2_Num.Hour != ALARM_DISABLE || Alarm2_Num.Minute != ALARM_DISABLE)
+ 574   1        {
+ 575   2          Led_Display_Table[1] |= 1;
+ 576   2        }
+ 577   1        
+ 578   1        for(i=0; i<7; i++)
+ 579   1        {
+ 580   2          INDEX = i;
+ 581   2          LXDAT = Led_Display_Table[i];
+ 582   2          Led_Display_Table[i] = 0;
+ 583   2        }
+ 584   1        
+ 585   1      }
+ 586          
+ 587          
+ 588          
+ 589          /******************************************************************************
+ 590          函数名：  Volume_LED_Display
+ 591          功能描述：显示FM当前频道
+ 592          输入参数: channel 频道值
+ 593          返回值：  无          
+ 594          ******************************************************************************/
+ 595          void FM_Channel_LED_Display(uint8_t channel)
+ 596          {
+ 597   1        uint8_t i = 0;
+ 598   1        
+ 599   1        Led_Number.TenDigitsHour = 0x01;
+ 600   1        if(channel>99)
+ 601   1        {
+ 602   2          channel = 99;
+ 603   2        }
+ 604   1        Led_Number.TenDigitsMinute = channel/10;
+ 605   1        Led_Number.UnitsDigitMinute = channel%10;
+ 606   1        
+C51 COMPILER V9.52.0.0   LED_CONTROL                                                       07/24/2018 11:06:12 PAGE 11  
+
+ 607   1        for(i=0; i<7; i++)
+ 608   1        {
+ 609   2          Led_Display_Table[i] |= (Number_Table[0x0C] >> i)&0x01;
+ 610   2          Led_Display_Table[i] <<= 1;
+ 611   2          Led_Display_Table[i] |= (Number_FMChannel >> i)&0x01;
+ 612   2          Led_Display_Table[i] <<= 1;
+ 613   2          Led_Display_Table[i] |= (Number_Table[Led_Number.TenDigitsMinute] >> i)&0x01;
+ 614   2          Led_Display_Table[i] <<= 1;
+ 615   2          Led_Display_Table[i] |= (Number_Table[Led_Number.UnitsDigitMinute] >> i)&0x01;
+ 616   2          Led_Display_Table[i] <<= 1;
+ 617   2        }
+ 618   1        
+ 619   1        
+ 620   1        for(i=0; i<7; i++)
+ 621   1        {
+ 622   2          INDEX = i;
+ 623   2          LXDAT = Led_Display_Table[i];
+ 624   2          Led_Display_Table[i] = 0;
+ 625   2        }
+ 626   1      }
+ 627          
+ 628          
+ 629          /******************************************************************************
+ 630          函数名：  LED_Display_Off
+ 631          功能描述：关闭LED显示
+ 632          输入参数: 无
+ 633          返回值：  无          
+ 634          ******************************************************************************/
+ 635          void LED_Display_Off(void)
+ 636          {
+ 637   1        uint8_t i = 0;
+ 638   1        
+ 639   1        for(i=0; i<7; i++)
+ 640   1        {   
+ 641   2          Led_Display_Table[i] <<= 4;
+ 642   2        }
+ 643   1        
+ 644   1        for(i=0; i<7; i++)
+ 645   1        {
+ 646   2          INDEX = i;
+ 647   2          LXDAT = Led_Display_Table[i];
+ 648   2          Led_Display_Table[i] = 0;
+ 649   2        }
+ 650   1        
+ 651   1      }
+ 652          
+ 653          
+ 654          #endif
+ 655          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   3655    ----
+   CONSTANT SIZE    =     19    ----
+   XDATA SIZE       =     33       6
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

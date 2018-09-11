@@ -1,0 +1,1 @@
+"Library\Sources\stop_idle.c" LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\stop_idle.lst) TABS (2) OBJECT(.\Output\stop_idle.obj)

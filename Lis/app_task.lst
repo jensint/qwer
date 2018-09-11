@@ -1,0 +1,1371 @@
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE APP_TASK
+OBJECT MODULE PLACED IN .\Output\app_task.obj
+COMPILER INVOKED BY: E:\Keil\C51\BIN\C51.EXE User\app_task.c LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\Librar
+                    -y\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\app_task.lst) TABS(2) OBJECT(.\Output\app_task.obj)
+
+line level    source
+
+   1          #ifndef _APP_TASK_C_
+   2          #define _APP_TASK_C_
+   3          
+   4          
+   5          #include "app_task.h"
+   6          
+   7          #define    TS_KEY_JITTER_TIME    3    //3*10ms
+   8          #define    TS_KEY_CP_TIME    150    //100*10ms
+   9          #define    TS_KEY_CPH_TIME    30
+  10          
+  11          uint8_t xdata Mode_Init_Flag = 0;
+  12          
+  13          uint8_t xdata Alarm_Ring_Flag = 0;
+  14          uint16_t xdata Alarm_Ring_Time = 0; 
+  15          uint8_t xdata LEDW_PWM_Time = 0;
+  16          uint8_t xdata LEDW_PWM_Num = 0;
+  17          uint8_t xdata LEDW_PWM_Num_DOWM = 0;
+  18          //uint16_t code LEDW_PWM_Table[30] = {730,722,715,709,704,700,692,685,677,670,660,650,640,632,624,616,608,
+             -600,590,575,560,545,515,485,470,440,410,390,360,0};
+  19          uint16_t code LEDW_PWM_Table[36] = {18432,18000,17700,17400,17100,16800,16500,15200,14900,14600,14300,1400
+             -0,13700,12400,12100,11800,11500,11200,10900,10600,10300,10000,9700,9400,9100,8900,8600,8300,8000,7700,7400,7000,5000,200
+             -0,1000,500};
+  20          uint16_t code LEDW_PWM_Table_DOWM[36] ={500,1000,1300,1600,1900,2200,2500,3000,3300,3600,4000,4300,4600,50
+             -00,5300,5600,6000,6300,6600,7000,7300,7600,8000,8300,8600,9000,9300,9600,10000,10300,10600,17100,17400,17700,18000,18432
+             -};
+  21            
+  22          uint16_t xdata TS_KEY_JUDGE_TIME;
+  23          
+  24          TASK_TIME xdata app_task_time;
+  25          SYS_STATE xdata sys_state;
+  26          
+  27          uint8_t xdata FM_CHANGE_FlAG = 0;
+  28          uint8_t xdata FM_CHANGE_COUNT = 0;  
+  29          
+  30          uint8_t xdata FM_INIT_COUNNT = 0; 
+  31          uint8_t xdata FM_INIT_STATE = 0;  //FM初始化状态 0:空闲 1:正在初始化 2:初始化完成
+  32            
+  33          uint8_t xdata FM_AUTO_SEARCH_FLAG = 0;
+  34          uint16_t xdata FM_AUTO_FREQ = 0;  //自动搜台频点
+  35          uint16_t xdata FM_FREQ_AREA[32];
+  36          uint8_t xdata FM_AREA_NUM = 0;
+  37            
+  38          uint16_t xdata TIME_DIV_NUM;  
+  39          int xdata LED_B_DutyDat=14000;  
+  40          uint16_t xdata LED_CIRCLE_FLAG=1; 
+  41          
+  42          uint8_t xdata msg_ts_key = TS_KEY_NONE;
+  43          uint8_t xdata TS_LONG_FLAG=0;
+  44          uint8_t xdata TS_LONG_COUNT=0;
+  45          /******************************************************************************
+  46          函数名：  Gpio_Conf
+  47          功能描述：GPIO配置
+  48          输入参数: 无
+  49          返回值：  无          
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 2   
+
+  50          ******************************************************************************/
+  51          void Gpio_Conf(void)
+  52          {
+  53   1        //POWER电源唤醒键
+  54   1        GPIO_Init(POWER_PIN_TCON, INPUT);
+  55   1        
+  56   1        GPIO_Init(ADC_KEY_PIN_TCON, P13_ADC3_SETTING);
+  57   1      
+  58   1        //BTPOWER蓝牙电源控制脚
+  59   1        GPIO_Init(BT_POWER_PIN_TCON, OUTPUT);
+  60   1        BT_Power_Ctrl(BT_POWER_OFF);
+  61   1        
+  62   1      //  GPIO_Init(LED_GREEN_PIN_TCON, PU_EN|OUTPUT);
+  63   1      //  LED_GREEN_PIN_DATA = 0;
+  64   1        
+  65   1        //LED接口
+  66   1        GPIO_Init(LED_COM0, P00_COM0_SETTING);
+  67   1        GPIO_Init(LED_COM1, P01_COM1_SETTING);
+  68   1        GPIO_Init(LED_COM2, P02_COM2_SETTING);
+  69   1        GPIO_Init(LED_COM3, P03_COM3_SETTING);
+  70   1        GPIO_Init(LED_COM4, P04_COM4_SETTING);
+  71   1        
+  72   1        GPIO_Init(LED_SEG1, P17_SEG0_SETTING);
+  73   1        GPIO_Init(LED_SEG2, P37_SEG1_SETTING);
+  74   1        GPIO_Init(LED_SEG3, P36_SEG2_SETTING);
+  75   1        GPIO_Init(LED_SEG4, P35_SEG3_SETTING);
+  76   1        GPIO_Init(LED_SEG5, P07_SEG5_SETTING);
+  77   1        GPIO_Init(LED_SEG6, P06_SEG6_SETTING);
+  78   1        GPIO_Init(LED_SEG7, P05_SEG7_SETTING);
+  79   1      
+  80   1      }
+  81          
+  82          
+  83          /******************************************************************************
+  84          函数名：  Sys_Parameter_Init
+  85          功能描述：系统参数初始化
+  86          输入参数: 无
+  87          返回值：  无          
+  88          ******************************************************************************/
+  89          void Sys_Parameter_Init(void)
+  90          {
+  91   1        sys_state.Volume = DEFAULT_VOLUME;
+  92   1        sys_state.Power = SYS_POWER_IDLE;
+  93   1        sys_state.Mode = SYS_IDLE;
+  94   1        sys_state.RecentMode = SYS_IDLE;
+  95   1        sys_state.SetTime = Unit_Null;
+  96   1        sys_state.FMFreq = 875;
+  97   1        
+  98   1        Alarm1_Num.Hour = ALARM_DISABLE;
+  99   1        Alarm1_Num.Minute = ALARM_DISABLE;
+ 100   1        Alarm2_Num.Hour = ALARM_DISABLE;
+ 101   1        Alarm2_Num.Minute = ALARM_DISABLE;
+ 102   1        sys_state.Alarm = ALARM_IDLE;
+ 103   1        sys_state.LEDWBrightness=0;
+ 104   1      }
+ 105          
+ 106          
+ 107          /******************************************************************************
+ 108          函数名：  Set_Alarm_Time
+ 109          功能描述：设置闹钟时间
+ 110          输入参数: hour    小时
+ 111                    minute  分钟
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 3   
+
+ 112                    second  秒
+ 113          返回值：  无          
+ 114          ******************************************************************************/
+ 115          void Set_Alarm_Time(uint8_t hour, uint8_t minute, uint8_t second)
+ 116          {
+ 117   1        RTC_SetAlaramTime(hour, minute, second);
+ 118   1      }
+ 119          /***********************************
+ 120          红灯渐变
+ 121          ***********************************/
+ 122          void LED_CIRCLE_SHOW(void)
+ 123          {
+ 124   1        if(LEDW_PWM_Time != 0) return;  
+ 125   1          if(sys_state.Mode != SYS_IDLE)
+ 126   1          {    
+ 127   2              if(sys_state.LEDWBrightness == LEVEL_1)
+ 128   2            {
+ 129   3              if(LEDW_PWM_Num < 37)
+ 130   3              {
+ 131   4                INDEX = PWM_CH1;
+ 132   4                PWMDUTH = (unsigned char)(LEDW_PWM_Table[LEDW_PWM_Num]>>8);
+ 133   4                PWMDUTL = (unsigned char)(LEDW_PWM_Table[LEDW_PWM_Num]);
+ 134   4      //        PWM_CfgDivDuty(PWM_CH1,LEDW_PWM_FREQ,value);
+ 135   4                PWM_Update(1<<PWM_CH1);
+ 136   4                LEDW_PWM_Num++;
+ 137   4                LEDW_PWM_Time = 100;
+ 138   4              }
+ 139   3                if(LEDW_PWM_Num==37)
+ 140   3                {
+ 141   4                  if(LEDW_PWM_Num_DOWM < 37)
+ 142   4                  {
+ 143   5                    INDEX = PWM_CH1;
+ 144   5                    PWMDUTH = (unsigned char)(LEDW_PWM_Table_DOWM[LEDW_PWM_Num_DOWM]>>8);
+ 145   5                    PWMDUTL = (unsigned char)(LEDW_PWM_Table_DOWM[LEDW_PWM_Num_DOWM]);
+ 146   5      //            PWM_CfgDivDuty(PWM_CH1,LEDW_PWM_FREQ,value);
+ 147   5                    PWM_Update(1<<PWM_CH1);
+ 148   5                    LEDW_PWM_Num_DOWM++;
+ 149   5                    LEDW_PWM_Time = 100;    
+ 150   5                  }
+ 151   4                    if(LEDW_PWM_Num_DOWM==37)
+ 152   4                    {
+ 153   5                      LEDW_PWM_Num=0;
+ 154   5                      LEDW_PWM_Num_DOWM=0;
+ 155   5                    }
+ 156   4                }
+ 157   3                
+ 158   3            }
+ 159   2          }
+ 160   1      }
+ 161          
+ 162          
+ 163          /*********************************************
+ 164          绿灯显示
+ 165          *********************************************/
+ 166          void RGB_GREEN_DIS(uint8_t flag)
+ 167          {
+ 168   1        uint16_t data value=100;
+ 169   1        if(flag)
+ 170   1        {
+ 171   2          Uart0_Send_nData("green\n", 6);
+ 172   2          INDEX = PWM_CH3;
+ 173   2          PWMDUTH = (unsigned char)(value>>8);
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 4   
+
+ 174   2          PWMDUTL = (unsigned char)(value);
+ 175   2          PWM_CfgDivDuty(PWM_CH1,LEDW_PWM_FREQ,value);
+ 176   2          PWM_Update(1<<PWM_CH3);
+ 177   2        }
+ 178   1      }
+ 179          void RGB_RED_DIS_OFF(void)
+ 180          {
+ 181   1        uint16_t data value=0;
+ 182   1        INDEX = PWM_CH1;
+ 183   1        PWMDUTH = (unsigned char)(value>>8);
+ 184   1        PWMDUTL = (unsigned char)(value);
+ 185   1        PWM_Update(1<<PWM_CH1);
+ 186   1      }
+ 187          
+ 188          /******************************************************************************
+ 189          函数名：  BT_Power_Ctrl
+ 190          功能描述：蓝牙供电控制
+ 191          输入参数: bt_power_sw
+ 192          返回值：  无          
+ 193          ******************************************************************************/
+ 194          void BT_Power_Ctrl(BT_Power_TypeDef bt_power_sw)
+ 195          {
+ 196   1        BT_POWER_PIN_DATA = bt_power_sw;
+ 197   1      }
+ 198          
+ 199          
+ 200          /******************************************************************************
+ 201          函数名：  Power_Det
+ 202          功能描述：电源开关检测
+ 203          输入参数: 无
+ 204          返回值：  power_status  0xFF:无效  0:关  1:开         
+ 205          ******************************************************************************/
+ 206          uint8_t Power_Det(void)
+ 207          {
+ 208   1        static uint8_t xdata PowerKeyState = 0;
+ 209   1        static uint8_t xdata PreKeyStatus = 0;
+ 210   1        static uint8_t xdata KeyDetCount = 0; 
+ 211   1        
+ 212   1        if(sys_state.Power == SYS_POWER_NORMAL)
+ 213   1        {
+ 214   2          if(app_task_time.PowerDet >= 1)
+ 215   2          {
+ 216   3            app_task_time.PowerDet = 0;
+ 217   3          }
+ 218   2          else
+ 219   2          {
+ 220   3            return 0xFF;
+ 221   3          }
+ 222   2        }
+ 223   1        
+ 224   1        switch(PowerKeyState)     //初始化，PowerKeyState=0
+ 225   1        {
+ 226   2          case 0:
+ 227   2            PreKeyStatus = POWER_PIN_DATA;    //检测到的POWER_PIN_DATA值赋给PreKeyStatus
+ 228   2            PowerKeyState = 1;
+ 229   2            KeyDetCount = 0;
+ 230   2            break;
+ 231   2          
+ 232   2          case 1:
+ 233   2            if(PreKeyStatus != POWER_PIN_DATA)   //第二次检测，判断PreKeyStatus 是否为 POWER_PIN_DATA
+ 234   2            {
+ 235   3              PowerKeyState = 0;    // 如果不是，则无效
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 5   
+
+ 236   3            }
+ 237   2            else
+ 238   2            {
+ 239   3              KeyDetCount++;
+ 240   3              if(KeyDetCount >= 5)
+ 241   3              {
+ 242   4      //          sys_state.Power = POWER_PIN_DATA;
+ 243   4                PowerKeyState = 2;
+ 244   4                return POWER_PIN_DATA;
+ 245   4      //          return sys_state.Power;
+ 246   4      //          Uart0_Send_nData("POWER", 5);       
+ 247   4              }       
+ 248   3            }
+ 249   2            break;
+ 250   2          
+ 251   2          case 2:
+ 252   2            if(PreKeyStatus != POWER_PIN_DATA)
+ 253   2            {
+ 254   3              PowerKeyState = 0;
+ 255   3            }
+ 256   2            break;
+ 257   2          
+ 258   2          default:
+ 259   2            PowerKeyState = 0;
+ 260   2            break;
+ 261   2        }
+ 262   1        return 0xFF;
+ 263   1      }
+ 264          
+ 265          /******************************************************************************
+ 266          函数名：  LEDW_Brightness_Ctrl
+ 267          功能描述：白色LED灯亮度控制
+ 268          输入参数: value
+ 269          返回值：  无          
+ 270          ******************************************************************************/
+ 271          void LEDW_Brightness_Ctrl(uint8_t level)
+ 272          {
+ 273   1        uint16_t data value;
+ 274   1        value=level;
+ 275   1        
+ 276   1        switch(level)
+ 277   1        {
+ 278   2          case LEVEL_0:
+ 279   2            value = LEDW_BRIGHTNESS_OFF;
+ 280   2            break;
+ 281   2          
+ 282   2          case LEVEL_1:
+ 283   2            value = LEDW_BRIGHTNESS_1;
+ 284   2            break;
+ 285   2          
+ 286   2          case LEVEL_2:
+ 287   2            value = LEDW_BRIGHTNESS_2;
+ 288   2            break;
+ 289   2          
+ 290   2          case LEVEL_3:
+ 291   2            value = LEDW_BRIGHTNESS_3;
+ 292   2            break;
+ 293   2          
+ 294   2          
+ 295   2          case LEVEL_ALARM:
+ 296   2            
+ 297   2            break;
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 6   
+
+ 298   2          
+ 299   2          default:
+ 300   2            break;
+ 301   2        }
+ 302   1      
+ 303   1      //  Uart0_Send_nData("LEDWPWM", 7);
+ 304   1        INDEX = PWM_CH1;
+ 305   1        PWMDUTH = (unsigned char)(value>>8);
+ 306   1        PWMDUTL = (unsigned char)(value);
+ 307   1      //  PWM_CfgDivDuty(PWM_CH1,LEDW_PWM_FREQ,value);
+ 308   1        PWM_Update(1<<PWM_CH1);
+ 309   1      }
+ 310          void LEDW_Brightness_Ctrl_circle(uint8_t value)
+ 311          {
+ 312   1        INDEX = PWM_CH1;
+ 313   1        PWMDUTH = (unsigned char)(value>>8);
+ 314   1        PWMDUTL = (unsigned char)(value);
+ 315   1      //  PWM_CfgDivDuty(PWM_CH1,LEDW_PWM_FREQ,value);
+ 316   1        PWM_Update(1<<PWM_CH1);
+ 317   1      }
+ 318          
+ 319          /******************************************************************************
+ 320          函数名：  TSkey_Scan
+ 321          功能描述：触摸按键扫描
+ 322          输入参数: 无
+ 323          返回值：  按键状态      
+ 324          ******************************************************************************/
+ 325          uint8_t TSkey_Scan(void)
+ 326          {
+ 327   1        static uint8_t xdata TSKeyState = TS_KEY_STATE_IDLE;
+ 328   1        uint8_t xdata KeyState;
+ 329   1        
+ 330   1        KeyState = (uint8_t)(KeysFlagSN & 0x0001);
+ 331   1        
+ 332   1        switch(TSKeyState)
+ 333   1        {
+ 334   2          case TS_KEY_STATE_IDLE:
+ 335   2            if(KeyState)
+ 336   2            {
+ 337   3              TSKeyState = TS_KEY_STATE_JITTER;
+ 338   3              TS_KEY_JUDGE_TIME = TS_KEY_JITTER_TIME;
+ 339   3            }
+ 340   2            break;
+ 341   2          
+ 342   2          case TS_KEY_STATE_JITTER:
+ 343   2            if(KeyState)
+ 344   2            {//按键有效
+ 345   3              if(TS_KEY_JUDGE_TIME == 0)
+ 346   3              {
+ 347   4                TSKeyState = TS_KEY_STATE_PRESS_DOWN;
+ 348   4                TS_KEY_JUDGE_TIME = TS_KEY_CP_TIME;
+ 349   4              }       
+ 350   3            }
+ 351   2            else
+ 352   2            {//抖动信号,按键无效
+ 353   3              TSKeyState = TS_KEY_STATE_IDLE;
+ 354   3            }
+ 355   2            break;
+ 356   2          
+ 357   2          case TS_KEY_STATE_PRESS_DOWN:
+ 358   2            if(KeyState)
+ 359   2            {
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 7   
+
+ 360   3              if(TS_KEY_JUDGE_TIME == 0)
+ 361   3              {//长按
+ 362   4                TSKeyState = TS_KEY_STATE_CP;
+ 363   4                TS_KEY_JUDGE_TIME = TS_KEY_CPH_TIME;
+ 364   4                return TS_KEY_LONG;
+ 365   4              }
+ 366   3            }
+ 367   2            else
+ 368   2            {//短按释放
+ 369   3              TSKeyState = TS_KEY_STATE_IDLE;
+ 370   3              return TS_KEY_SHORT;
+ 371   3            }
+ 372   2            break;
+ 373   2          
+ 374   2          case TS_KEY_STATE_CP:
+ 375   2            if(KeyState)
+ 376   2            {
+ 377   3              if(TS_KEY_JUDGE_TIME == 0)
+ 378   3              {//长按保持
+ 379   4                TS_KEY_JUDGE_TIME = TS_KEY_CPH_TIME;
+ 380   4                return TS_KEY_LONG_HOLD;
+ 381   4              }
+ 382   3            }
+ 383   2            else
+ 384   2            {//长按释放
+ 385   3              TSKeyState = TS_KEY_STATE_IDLE;
+ 386   3              return TS_KEY_LONG_RELEASE;
+ 387   3            }
+ 388   2            break;
+ 389   2            
+ 390   2          default:
+ 391   2            break;
+ 392   2        }
+ 393   1        
+ 394   1        return TS_KEY_NONE;
+ 395   1      }
+ 396          
+ 397          
+ 398          /******************************************************************************
+ 399          函数名：  Key_Scan
+ 400          功能描述：按键扫描处理
+ 401          输入参数: 无
+ 402          返回值：  无          
+ 403          ******************************************************************************/
+ 404          void Key_Scan(void)
+ 405          {
+ 406   1        static uint8_t MSG_MODE_SHORT_count=0;
+ 407   1        uint8_t xdata msg_adc_key = MSG_NONE;
+ 408   1      //  uint8_t xdata msg_ts_key = TS_KEY_NONE;
+ 409   1        
+ 410   1        if(app_task_time.AdcKeyScan >= 1)
+ 411   1        {
+ 412   2          app_task_time.AdcKeyScan = 0;  
+ 413   2        }
+ 414   1        else
+ 415   1        {
+ 416   2          return; 
+ 417   2        }
+ 418   1        
+ 419   1        msg_adc_key = Adc_Key_Sacn();
+ 420   1        
+ 421   1        if(msg_adc_key != MSG_NONE)
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 8   
+
+ 422   1        {
+ 423   2          if(sys_state.Alarm == ALARM_1)
+ 424   2          {
+ 425   3            Mcu_SendCmdToBT(CMD_RING2);
+ 426   3            LEDW_Brightness_Ctrl(LEVEL_0);
+ 427   3            sys_state.Alarm = ALARM_IDLE;
+ 428   3          }
+ 429   2          else if(sys_state.Alarm == ALARM_2)
+ 430   2          {
+ 431   3            Mcu_SendCmdToBT(CMD_RING2);
+ 432   3            LEDW_Brightness_Ctrl(LEVEL_0);
+ 433   3            sys_state.Alarm = ALARM_IDLE;
+ 434   3          }
+ 435   2          
+ 436   2          if(Alarm_Ring_Flag)
+ 437   2          {
+ 438   3            Alarm_Ring_Flag = 0;
+ 439   3            BT_Uart.BTCmd_Temp = CMD_RING2;
+ 440   3            BT_Uart.BTCmdResendFlag = 1;
+ 441   3      //      Mcu_SendCmdToBT(CMD_RING2);
+ 442   3          }
+ 443   2        }
+ 444   1        //处理按键
+ 445   1        switch(msg_adc_key)
+ 446   1        {
+ 447   2          case MSG_MODE_SHORT://模式切换
+ 448   2      //      Uart0_Send_nData("MODE_ST", 7);
+ 449   2            
+ 450   2            if(sys_state.Mode == SYS_FM)
+ 451   2            { 
+ 452   3              MSG_MODE_SHORT_count++;
+ 453   3              if(Mode_Init_Flag)
+ 454   3              {
+ 455   4                Mode_Init_Flag = 0;
+ 456   4                sys_state.Mode = SYS_BLUETOOTH;
+ 457   4                BT_Uart.BTCmd_Temp = CMD_BT;
+ 458   4                BT_Uart.BTCmdResendFlag = 1;
+ 459   4              }
+ 460   3            }
+ 461   2            else
+ 462   2            {
+ 463   3              if(sys_state.SetTime != Unit_Null)
+ 464   3              {//确认设置的时间值
+ 465   4                if(sys_state.Mode == SYS_ALARM1)
+ 466   4                {
+ 467   5                  Alarm1_Num.Hour = Settime_Num.Hour;
+ 468   5                  Alarm1_Num.Minute = Settime_Num.Minute;
+ 469   5                  Alarm_LED_Display(SYS_ALARM1);
+ 470   5                }
+ 471   4                else if(sys_state.Mode == SYS_ALARM2)
+ 472   4                {
+ 473   5                  Alarm2_Num.Hour = Settime_Num.Hour;
+ 474   5                  Alarm2_Num.Minute = Settime_Num.Minute;
+ 475   5                  Alarm_LED_Display(SYS_ALARM2);
+ 476   5                }
+ 477   4                else
+ 478   4                { 
+ 479   5                  RTC_WriteSecond(0);
+ 480   5                  RTC_WriteMinute(Settime_Num.Minute);
+ 481   5                  RTC_WriteHour(Settime_Num.Hour);
+ 482   5                }
+ 483   4                sys_state.SetTime = Unit_Null;
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 9   
+
+ 484   4              }
+ 485   3              else if(sys_state.Mode == SYS_CLOCK)
+ 486   3              {//切换到FM
+ 487   4                sys_state.Mode = SYS_FM;
+ 488   4                BT_Uart.BTCmd_Temp = CMD_FM;
+ 489   4                BT_Uart.BTCmdResendFlag = 1;
+ 490   4                FM_Freq_LED_Display(sys_state.FMFreq);
+ 491   4                to_RDA5807_Init(MSG_MODE_SHORT_count);
+ 492   4                //RDA5807_Init();     
+ 493   4              }
+ 494   3              else if(sys_state.Mode == SYS_BLUETOOTH)
+ 495   3              {
+ 496   4                sys_state.Mode = SYS_AUX;
+ 497   4                BT_Uart.BTCmd_Temp = CMD_AUX;
+ 498   4                BT_Uart.BTCmdResendFlag = 1;
+ 499   4              }
+ 500   3              else if(sys_state.Mode == SYS_AUX)
+ 501   3              {
+ 502   4                sys_state.Mode = SYS_ALARM1;
+ 503   4                BT_Uart.BTCmd_Temp = CMD_CLOCK;
+ 504   4                BT_Uart.BTCmdResendFlag = 1;
+ 505   4                Alarm_LED_Display(SYS_ALARM1);    
+ 506   4      //          Mcu_SendCmdToBT(CMD_RING1);
+ 507   4      //          BT_Uart.BTCmd_Temp = CMD_RING1;
+ 508   4      //          BT_Uart.BTCmdResendFlag = 1;
+ 509   4              }
+ 510   3              else if(sys_state.Mode == SYS_ALARM1)
+ 511   3              {
+ 512   4                sys_state.Mode = SYS_ALARM2;
+ 513   4                BT_Uart.BTCmd_Temp = CMD_CLOCK;
+ 514   4                BT_Uart.BTCmdResendFlag = 1;
+ 515   4                Alarm_LED_Display(SYS_ALARM2);
+ 516   4      //          Mcu_SendCmdToBT(CMD_RING2);
+ 517   4      //          BT_Uart.BTCmd_Temp = CMD_RING2;
+ 518   4      //          BT_Uart.BTCmdResendFlag = 1;
+ 519   4              }
+ 520   3              else if(sys_state.Mode == SYS_ALARM2)
+ 521   3              {
+ 522   4                sys_state.Mode = SYS_CLOCK;
+ 523   4                BT_Uart.BTCmd_Temp = CMD_CLOCK;
+ 524   4                BT_Uart.BTCmdResendFlag = 1;
+ 525   4              }
+ 526   3            }     
+ 527   2            break;
+ 528   2          
+ 529   2          case MSG_MODE_LONG://设置时间
+ 530   2            if(sys_state.Mode == SYS_BLUETOOTH || sys_state.Mode == SYS_AUX || sys_state.Mode == SYS_CLOCK)
+ 531   2            {
+ 532   3              Settime_Num.Hour = RTC_Num.Hour;
+ 533   3              Settime_Num.Minute = RTC_Num.Minute;
+ 534   3            }
+ 535   2            else if(sys_state.Mode == SYS_ALARM1)
+ 536   2            {//设置闹钟1
+ 537   3              Settime_Num.Hour = Alarm1_Num.Hour;
+ 538   3              Settime_Num.Minute = Alarm1_Num.Minute;
+ 539   3            }
+ 540   2            else if(sys_state.Mode == SYS_ALARM2)
+ 541   2            {//设置闹钟2
+ 542   3              Settime_Num.Hour = Alarm2_Num.Hour;
+ 543   3              Settime_Num.Minute = Alarm2_Num.Minute;
+ 544   3            }
+ 545   2            
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 10  
+
+ 546   2            if(sys_state.Mode != SYS_FM && sys_state.SetTime == Unit_Null)
+ 547   2            {
+ 548   3              Settime_Keeptime_Count = KEEPTIME_COUNT;  //5秒
+ 549   3              sys_state.SetTime = Unit_Hour;
+ 550   3            }
+ 551   2      //      Uart0_Send_nData("MODE_LG", 7);
+ 552   2            break;
+ 553   2          
+ 554   2          case MSG_MODE_HOLD:
+ 555   2            
+ 556   2            Uart0_Send_nData("MODE_HD", 7);
+ 557   2            break;
+ 558   2          
+ 559   2          case MSG_VOL_DOWN_SHORT://
+ 560   2            if(sys_state.SetTime != Unit_Null)
+ 561   2            {
+ 562   3              Set_Time_Down(sys_state.SetTime);
+ 563   3            }
+ 564   2            else if(sys_state.Mode == SYS_BLUETOOTH)
+ 565   2            {//上一曲
+ 566   3              BT_Uart.BTCmd_Temp = CMD_PREV;
+ 567   3              BT_Uart.BTCmdResendFlag = 1;
+ 568   3      //        Mcu_SendCmdToBT(CMD_PREV);
+ 569   3      //        Uart0_Send_nData("KEY_PRE", 7);
+ 570   3            }
+ 571   2            else if(sys_state.Mode == SYS_FM)
+ 572   2            {
+ 573   3              sys_state.FMFreq--;
+ 574   3              if(sys_state.FMFreq < 875)
+ 575   3              {
+ 576   4                sys_state.FMFreq = 1080;
+ 577   4              }
+ 578   3              FM_Freq_LED_Display(sys_state.FMFreq);
+ 579   3              RDA5807_FreqSet(sys_state.FMFreq);
+ 580   3      //        FM_AUTO_SEARCH_FLAG = 1;
+ 581   3      //        app_task_time.FMAutoSearch = 10;
+ 582   3            }
+ 583   2            else if(sys_state.Mode == SYS_CLOCK || sys_state.Mode == SYS_ALARM1)
+ 584   2            {//时间下调
+ 585   3      //        Uart0_Send_nData("TIME_DN", 7);  
+ 586   3            }
+ 587   2            break;
+ 588   2          
+ 589   2          case MSG_VOL_DOWN_LONG: 
+ 590   2          case MSG_VOL_DOWN_HOLD:
+ 591   2            if(sys_state.SetTime != Unit_Null)
+ 592   2            {
+ 593   3              Set_Time_Down(sys_state.SetTime);
+ 594   3            }
+ 595   2            else if(sys_state.Mode == SYS_BLUETOOTH || sys_state.Mode == SYS_AUX || sys_state.Mode == SYS_FM)
+ 596   2            {//音量-
+ 597   3              if(Set_Volume(SET_VOLUME_DOWN))
+ 598   3              {
+ 599   4      //          Mcu_SendCmdToBT(CMD_VOLUME);          
+ 600   4              }
+ 601   3              BT_Uart.BTCmd_Temp = CMD_VOLUME;
+ 602   3              BT_Uart.BTCmdResendFlag = 1;
+ 603   3      //        Mcu_SendCmdToBT(CMD_VOLUME);  
+ 604   3              sys_state.SetVolumeFlag = 1;
+ 605   3              SetVolume_Keeptime_Count = KEEPVOLUME_COUNT;
+ 606   3              Volume_LED_Display(sys_state.Volume);
+ 607   3            }
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 11  
+
+ 608   2            break;
+ 609   2          
+ 610   2          case MSG_VOL_UP_SHORT:
+ 611   2            if(sys_state.SetTime != Unit_Null)
+ 612   2            {
+ 613   3              Set_Time_Up(sys_state.SetTime);
+ 614   3            }
+ 615   2            else if(sys_state.Mode == SYS_BLUETOOTH)
+ 616   2            {//下一曲
+ 617   3              BT_Uart.BTCmd_Temp = CMD_NEXT;
+ 618   3              BT_Uart.BTCmdResendFlag = 1;
+ 619   3      //        Mcu_SendCmdToBT(CMD_NEXT);
+ 620   3      //        Uart0_Send_nData("KEY_NEXT", 8);  
+ 621   3            }
+ 622   2            else if(sys_state.Mode == SYS_FM)
+ 623   2            {
+ 624   3              sys_state.FMFreq++;
+ 625   3              if(sys_state.FMFreq > 1080)
+ 626   3              {
+ 627   4                sys_state.FMFreq = 875;
+ 628   4              }
+ 629   3              FM_Freq_LED_Display(sys_state.FMFreq);
+ 630   3              RDA5807_FreqSet(sys_state.FMFreq);
+ 631   3      //        FM_AUTO_SEARCH_FLAG = 1;
+ 632   3      //        app_task_time.FMAutoSearch = 10;
+ 633   3            }
+ 634   2            else if(sys_state.Mode == SYS_CLOCK || sys_state.Mode == SYS_ALARM1)
+ 635   2            {//时间上调
+ 636   3      //        Uart0_Send_nData("TIME_UP", 7);  
+ 637   3            }
+ 638   2            break;
+ 639   2          
+ 640   2          case MSG_VOL_UP_LONG:
+ 641   2          case MSG_VOL_UP_HOLD:
+ 642   2            if(sys_state.SetTime != Unit_Null)
+ 643   2            {
+ 644   3              Set_Time_Up(sys_state.SetTime);
+ 645   3            }
+ 646   2            else if(sys_state.Mode == SYS_BLUETOOTH || sys_state.Mode == SYS_AUX || sys_state.Mode == SYS_FM)
+ 647   2            {//音量+
+ 648   3              if(Set_Volume(SET_VOLUME_UP))
+ 649   3              {
+ 650   4      //          Mcu_SendCmdToBT(CMD_VOLUME);
+ 651   4              }
+ 652   3              BT_Uart.BTCmd_Temp = CMD_VOLUME;
+ 653   3              BT_Uart.BTCmdResendFlag = 1;
+ 654   3      //        Mcu_SendCmdToBT(CMD_VOLUME);
+ 655   3              sys_state.SetVolumeFlag = 1;
+ 656   3              SetVolume_Keeptime_Count = KEEPVOLUME_COUNT;
+ 657   3              Volume_LED_Display(sys_state.Volume);
+ 658   3            }
+ 659   2            break;
+ 660   2          
+ 661   2          case MSG_MFD_SHORT:
+ 662   2            if(sys_state.SetTime == Unit_Hour)
+ 663   2            {
+ 664   3              Settime_Keeptime_Count = KEEPTIME_COUNT;
+ 665   3              sys_state.SetTime = Unit_Minute;
+ 666   3            }
+ 667   2            else if(sys_state.SetTime == Unit_Minute)
+ 668   2            {
+ 669   3              Settime_Keeptime_Count = KEEPTIME_COUNT;
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 12  
+
+ 670   3              sys_state.SetTime = Unit_Hour;
+ 671   3            }
+ 672   2            else if(sys_state.Mode == SYS_BLUETOOTH)
+ 673   2            {
+ 674   3              BT_Uart.BTCmd_Temp = CMD_PLAYPUSE;
+ 675   3              BT_Uart.BTCmdResendFlag = 1;
+ 676   3      //        Mcu_SendCmdToBT(CMD_PLAYPUSE);
+ 677   3            }
+ 678   2            else if(sys_state.Mode == SYS_FM)
+ 679   2            {
+ 680   3              if(FM_AUTO_SEARCH_FLAG)
+ 681   3              {//正在搜台,停止搜台
+ 682   4                FM_AUTO_SEARCH_FLAG = 0;
+ 683   4                if(sys_state.FM_CH_Num > 0)
+ 684   4                {
+ 685   5                  sys_state.FMFreq = FM_FREQ_AREA[0];
+ 686   5                  sys_state.FM_CH = 0;
+ 687   5                  
+ 688   5                  FM_Freq_LED_Display(sys_state.FMFreq);
+ 689   5                  RDA5807_FreqSet(sys_state.FMFreq);
+ 690   5                }
+ 691   4                else
+ 692   4                {
+ 693   5                  sys_state.FM_CH_Num = 0;
+ 694   5                }
+ 695   4              }
+ 696   3              else
+ 697   3              {//切换保存的台
+ 698   4                FM_Channel_Up();
+ 699   4              }
+ 700   3            }
+ 701   2      //      Uart0_Send_nData("MFD_SH", 6);
+ 702   2            break;
+ 703   2          
+ 704   2          case MSG_MFD_LONG://设置闹钟
+ 705   2      //      if(sys_state.SetTime != Unit_Null)
+ 706   2      //      {//取消时间设置
+ 707   2      //        sys_state.SetTime = Unit_Null;
+ 708   2      //        if(sys_state.Mode == SYS_ALARM1 || sys_state.Mode == SYS_ALARM2)
+ 709   2      //        {
+ 710   2      //          Alarm_LED_Display(sys_state.Mode);
+ 711   2      //        }
+ 712   2      //      }
+ 713   2            if(sys_state.Mode == SYS_BLUETOOTH)
+ 714   2            {
+ 715   3              Mcu_SendCmdToBT(CMD_RECALL);
+ 716   3            }
+ 717   2            else if(sys_state.Mode == SYS_FM)    
+ 718   2            {      
+ 719   3              FM_AREA_NUM = 0;
+ 720   3              sys_state.FM_CH_Num = 0;
+ 721   3              sys_state.FMFreqTemp = sys_state.FMFreq;
+ 722   3              sys_state.FMFreq = 875;
+ 723   3      //        FM_AUTO_FREQ = 875;
+ 724   3              RDA5807_FreqSet(sys_state.FMFreq);
+ 725   3              FM_Freq_LED_Display(sys_state.FMFreq);
+ 726   3              FM_AUTO_SEARCH_FLAG = 1;
+ 727   3              app_task_time.FMAutoSearch = 10;
+ 728   3            }
+ 729   2      //      Uart0_Send_nData("MFD_LG", 6);
+ 730   2            break;
+ 731   2          
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 13  
+
+ 732   2          case MSG_MFD_HOLD:
+ 733   2      //      Uart0_Send_nData("MFD_HD", 6);
+ 734   2            break;
+ 735   2          
+ 736   2          default:
+ 737   2      //      Uart0_Send_nData("KEY_NONE", 8);
+ 738   2            break;
+ 739   2        }
+ 740   1        
+ 741   1        msg_ts_key = TSkey_Scan();
+ 742   1        
+ 743   1        if(msg_ts_key != TS_KEY_NONE)
+ 744   1        {     
+ 745   2          if(sys_state.Alarm == ALARM_1)
+ 746   2          {
+ 747   3      //      Mcu_SendCmdToBT(CMD_RING2);
+ 748   3            LEDW_Brightness_Ctrl(LEVEL_0);
+ 749   3            sys_state.Alarm = ALARM_IDLE;
+ 750   3          }
+ 751   2          else if(sys_state.Alarm == ALARM_2)
+ 752   2          {     
+ 753   3      //      Mcu_SendCmdToBT(CMD_RING2);
+ 754   3            LEDW_Brightness_Ctrl(LEVEL_0);
+ 755   3            sys_state.Alarm = ALARM_IDLE;
+ 756   3          }
+ 757   2          
+ 758   2          if(Alarm_Ring_Flag)
+ 759   2          {
+ 760   3            Alarm_Ring_Flag = 0;
+ 761   3            BT_Uart.BTCmd_Temp = CMD_RING2;
+ 762   3            BT_Uart.BTCmdResendFlag = 1;
+ 763   3      //      Mcu_SendCmdToBT(CMD_RING2);
+ 764   3          }
+ 765   2        
+ 766   2        
+ 767   2        
+ 768   2        
+ 769   2        if(msg_ts_key == TS_KEY_SHORT)
+ 770   2        {//设置灯光亮度
+ 771   3      //    Uart0_Send_nData("TS_KEY_SHORT\n", 13);
+ 772   3          if(sys_state.Mode != SYS_IDLE)
+ 773   3          {
+ 774   4            sys_state.LEDWBrightness++;
+ 775   4            Uart0_PutChar(sys_state.LEDWBrightness);  
+ 776   4            
+ 777   4              if(sys_state.LEDWBrightness > LEVEL_3)
+ 778   4              {
+ 779   5                sys_state.LEDWBrightness = LEVEL_0;
+ 780   5              }
+ 781   4              Mcu_SendCmdToBT(CMD_RING2);
+ 782   4      //        Uart0_PutChar(sys_state.LEDWBrightness);
+ 783   4              if(sys_state.LEDWBrightness != LEVEL_1)
+ 784   4              {
+ 785   5                LEDW_Brightness_Ctrl(sys_state.LEDWBrightness);   
+ 786   5              }         
+ 787   4          }
+ 788   3        }
+ 789   2        else if(msg_ts_key == TS_KEY_LONG)
+ 790   2        {//蓝牙TWS功能
+ 791   3          TS_LONG_FLAG=1;
+ 792   3          TS_LONG_COUNT++;
+ 793   3          Uart0_PutChar(TS_LONG_COUNT);
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 14  
+
+ 794   3          if(TS_LONG_COUNT==1)
+ 795   3          {
+ 796   4            Uart0_PutChar(TS_LONG_COUNT);
+ 797   4            Uart0_PutChar(TS_LONG_FLAG);
+ 798   4            RGB_RED_DIS_OFF();
+ 799   4      //      RGB_GREEN_DIS(TS_LONG_FLAG);
+ 800   4          }
+ 801   3          else
+ 802   3          {
+ 803   4            TS_LONG_FLAG=0;
+ 804   4            TS_LONG_COUNT=0;
+ 805   4          }
+ 806   3          if(sys_state.Mode == SYS_BLUETOOTH)
+ 807   3          {
+ 808   4            BT_Uart.BTCmd_Temp = CMD_TWS;
+ 809   4            BT_Uart.BTCmdResendFlag = 1;
+ 810   4      //      Mcu_SendCmdToBT(CMD_TWS);
+ 811   4          }
+ 812   3          
+ 813   3          
+ 814   3      //    Mcu_SendCmdToBT(CMD_RING1);
+ 815   3      //    Uart0_Send_nData("TS_KEY_LONG", 11);
+ 816   3        }
+ 817   2      
+ 818   2      }
+ 819   1      }
+ 820          
+ 821          /******************************************************************************
+ 822          函数名：  Uart0_Send_nData
+ 823          功能描述：串口发送数据
+ 824          输入参数: databuf      数据包
+ 825                    data_length  数据长度
+ 826          返回值：  无          
+ 827          ******************************************************************************/
+ 828          void Uart0_Send_nData(uint8_t *databuf, uint8_t data_length)
+ 829          {
+ 830   1        uint8_t n;
+ 831   1        
+ 832   1        for(n = 0; n < data_length; n++)
+ 833   1        {
+ 834   2          Uart0_PutChar(*databuf);
+ 835   2          databuf++;
+ 836   2        }
+ 837   1      }
+ 838          
+ 839          
+ 840          
+ 841          /******************************************************************************
+ 842          函数名：  Set_Time_Up
+ 843          功能描述：向上设置时间
+ 844          输入参数: mode  设置小时/分钟
+ 845          返回值：  无          
+ 846          ******************************************************************************/
+ 847          void Set_Time_Up(CLOCK_UNIT mode)
+ 848          {
+ 849   1        if(mode == Unit_Hour)
+ 850   1        {
+ 851   2          if(sys_state.Mode == SYS_ALARM1 || sys_state.Mode == SYS_ALARM2)
+ 852   2          {
+ 853   3            if(Settime_Num.Hour == ALARM_DISABLE)
+ 854   3            {
+ 855   4              Settime_Num.Hour = 0;
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 15  
+
+ 856   4              Settime_Num.Minute = 0;
+ 857   4            }
+ 858   3            else if(Settime_Num.Hour == 23)
+ 859   3            {
+ 860   4              Settime_Num.Hour = ALARM_DISABLE;
+ 861   4              Settime_Num.Minute = ALARM_DISABLE;
+ 862   4            }
+ 863   3            else
+ 864   3            {
+ 865   4              Settime_Num.Hour++;
+ 866   4            }
+ 867   3          }
+ 868   2          else
+ 869   2          {
+ 870   3            Settime_Num.Hour++;
+ 871   3            if(Settime_Num.Hour == 24)
+ 872   3            {
+ 873   4              Settime_Num.Hour = 0;
+ 874   4            }
+ 875   3          }
+ 876   2        }
+ 877   1        else if(mode == Unit_Minute)
+ 878   1        {
+ 879   2          Settime_Num.Minute++;
+ 880   2          if(Settime_Num.Minute >= 60)
+ 881   2          {
+ 882   3            Settime_Num.Minute = 0;
+ 883   3          }
+ 884   2        }
+ 885   1      
+ 886   1        Settime_Keeptime_Count = KEEPTIME_COUNT;  //5秒
+ 887   1        Settime_Dis_Count = DIS_COUNT;  //1.5秒
+ 888   1        Settime_LED_Display(sys_state.Mode, sys_state.SetTime, 1);
+ 889   1      }
+ 890          
+ 891          
+ 892          /******************************************************************************
+ 893          函数名：  Set_Time_Down
+ 894          功能描述：向下设置时间
+ 895          输入参数: mode  设置小时/分钟
+ 896          返回值：  无          
+ 897          ******************************************************************************/
+ 898          void Set_Time_Down(CLOCK_UNIT mode)
+ 899          {
+ 900   1        if(mode == Unit_Hour)
+ 901   1        {
+ 902   2          if(sys_state.Mode == SYS_ALARM1 || sys_state.Mode == SYS_ALARM2)
+ 903   2          {
+ 904   3            if(Settime_Num.Hour == 0)
+ 905   3            {
+ 906   4              Settime_Num.Hour = ALARM_DISABLE;
+ 907   4              Settime_Num.Minute = ALARM_DISABLE;
+ 908   4            }
+ 909   3            else if(Settime_Num.Hour == ALARM_DISABLE)
+ 910   3            {
+ 911   4              Settime_Num.Hour = 23;
+ 912   4              Settime_Num.Minute = 0;
+ 913   4            }
+ 914   3            else
+ 915   3            {
+ 916   4              Settime_Num.Hour--;
+ 917   4            }
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 16  
+
+ 918   3          }
+ 919   2          else
+ 920   2          {
+ 921   3            if(Settime_Num.Hour == 0)
+ 922   3            {
+ 923   4              Settime_Num.Hour = 23;
+ 924   4            }
+ 925   3            else
+ 926   3            {
+ 927   4              Settime_Num.Hour--;
+ 928   4            }
+ 929   3          }
+ 930   2        }
+ 931   1        else if(mode == Unit_Minute)
+ 932   1        {       
+ 933   2          if(Settime_Num.Minute == 0)
+ 934   2          {
+ 935   3            Settime_Num.Minute = 60;
+ 936   3          }
+ 937   2          Settime_Num.Minute--;
+ 938   2        }
+ 939   1        
+ 940   1        Settime_Keeptime_Count = KEEPTIME_COUNT;  //5秒
+ 941   1        Settime_Dis_Count = DIS_COUNT;  //1.5秒
+ 942   1        Settime_LED_Display(sys_state.Mode, sys_state.SetTime, 1);
+ 943   1      }
+ 944          
+ 945          
+ 946          
+ 947          /******************************************************************************
+ 948          函数名：  Set_Volume
+ 949          功能描述：设置音量
+ 950          输入参数: set_mode  上调/下调
+ 951          返回值：  0 已经是最大或者最小音量    1:音量调节成功
+ 952          ******************************************************************************/
+ 953          uint8_t Set_Volume(_SET_VOLUME set_mode)
+ 954          {
+ 955   1        if(set_mode == SET_VOLUME_DOWN)
+ 956   1        {
+ 957   2          if(sys_state.Volume > 0)
+ 958   2          {
+ 959   3            sys_state.Volume--;
+ 960   3            return 1;
+ 961   3          }
+ 962   2        }
+ 963   1        else if(set_mode == SET_VOLUME_UP)
+ 964   1        {
+ 965   2          if(sys_state.Volume < MAX_VOLUME)
+ 966   2          {
+ 967   3            sys_state.Volume++;
+ 968   3            return 1;
+ 969   3          }
+ 970   2        }
+ 971   1        return 0;
+ 972   1      }
+ 973          
+ 974          
+ 975          /******************************************************************************
+ 976          函数名：  
+ 977          功能描述：闹钟
+ 978          输入参数: 
+ 979          返回值：  
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 17  
+
+ 980          ******************************************************************************/
+ 981          void Set_Alarm(void)
+ 982          {
+ 983   1        if(Alarm1_Num.Hour == ALARM_DISABLE && Alarm2_Num.Hour == ALARM_DISABLE) return;
+ 984   1        
+ 985   1        if(sys_state.Alarm != ALARM_IDLE) return;
+ 986   1        
+ 987   1        if(RTC_Num.Second != 0) return;
+ 988   1        
+ 989   1      
+ 990   1        if(Alarm1_Num.Hour != ALARM_DISABLE)
+ 991   1        {//设置闹钟1
+ 992   2          if((Alarm1_Num.Hour == RTC_Num.Hour) && (Alarm1_Num.Minute == RTC_Num.Minute))
+ 993   2          {//闹钟1
+ 994   3      //      Mcu_SendCmdToBT(CMD_RING1);
+ 995   3            Uart0_Send_nData("IS_RING1", 8);
+ 996   3            sys_state.Alarm = ALARM_1;
+ 997   3            LEDW_PWM_Num = 0;
+ 998   3            Alarm_Ring_Time = 6000;
+ 999   3          }
+1000   2        }
+1001   1        
+1002   1        if(Alarm2_Num.Hour != ALARM_DISABLE)
+1003   1        {//设置闹钟2
+1004   2          if((Alarm2_Num.Hour == RTC_Num.Hour) && (Alarm2_Num.Minute == RTC_Num.Minute))
+1005   2          {//闹钟2
+1006   3      //      Mcu_SendCmdToBT(CMD_RING1);
+1007   3            Uart0_Send_nData("IS_RING2", 8);
+1008   3            sys_state.Alarm = ALARM_2;
+1009   3            LEDW_PWM_Num = 0;
+1010   3            Alarm_Ring_Time = 6000;
+1011   3          }
+1012   2        }
+1013   1      }
+1014          
+1015          
+1016          /******************************************************************************
+1017          函数名：  
+1018          功能描述：闹钟灯光控制
+1019          输入参数: 
+1020          返回值：  
+1021          ******************************************************************************/
+1022          void Alarm_LED_Ctrl(void)
+1023          {
+1024   1        if(LEDW_PWM_Time != 0) return;
+1025   1        
+1026   1        if(sys_state.Alarm != ALARM_IDLE)
+1027   1        {
+1028   2          if(LEDW_PWM_Num < 30)
+1029   2          {
+1030   3      //    Uart0_Send_nData("ALARM", 5);
+1031   3            INDEX = PWM_CH1;
+1032   3            PWMDUTH = (unsigned char)(LEDW_PWM_Table[LEDW_PWM_Num]>>8);
+1033   3            PWMDUTL = (unsigned char)(LEDW_PWM_Table[LEDW_PWM_Num]);
+1034   3      //  PWM_CfgDivDuty(PWM_CH1,LEDW_PWM_FREQ,value);
+1035   3            PWM_Update(1<<PWM_CH1);
+1036   3            LEDW_PWM_Num++;
+1037   3            LEDW_PWM_Time = 10;
+1038   3          }   
+1039   2        }
+1040   1      }
+1041          
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 18  
+
+1042          /******************************************************************************
+1043          函数名：  FM_Init
+1044          功能描述：FM初始化
+1045          输入参数: 无
+1046          返回值：  无
+1047          ******************************************************************************/
+1048          void FM_Init(void)
+1049          {
+1050   1        if((FM_INIT_STATE == 1)&&(FM_INIT_COUNNT == 0))
+1051   1        {
+1052   2          FM_Freq_LED_Display(sys_state.FMFreq);
+1053   2          RDA5807_Init();
+1054   2          FM_INIT_STATE = 2;
+1055   2        }
+1056   1      
+1057   1      }
+1058          
+1059          
+1060          /******************************************************************************
+1061          函数名：  FM_Auto_Scan
+1062          功能描述：FM搜台
+1063          输入参数: 无
+1064          返回值：  无
+1065          ******************************************************************************/
+1066          void FM_Auto_Scan(void)
+1067          {
+1068   1        static uint8_t fm_keep_flag = 0;
+1069   1        if(sys_state.Mode != SYS_FM)
+1070   1        {
+1071   2          fm_keep_flag = 0;
+1072   2          FM_AUTO_SEARCH_FLAG = 0;
+1073   2          return;
+1074   2        }
+1075   1        
+1076   1        if(FM_AUTO_SEARCH_FLAG)  //长按时MFD键：FM_AUTO_SEARCH_FLAG=1
+1077   1        {
+1078   2          if(app_task_time.FMAutoSearch == 0)   //长按时：app_task_time.FMAutoSearch=10;
+1079   2          {
+1080   3      //        FM_AUTO_SEARCH_FLAG = 0;
+1081   3            if(fm_keep_flag)
+1082   3            {
+1083   4              fm_keep_flag = 0;
+1084   4              
+1085   4              sys_state.FMFreq++;
+1086   4      //        FM_AUTO_FREQ++;
+1087   4      //        if(FM_AUTO_FREQ > 1080)
+1088   4              if(sys_state.FMFreq > 1080)
+1089   4              {
+1090   5      //          Uart0_Send_nData("FM_OVER", 7);
+1091   5                FM_AUTO_SEARCH_FLAG = 0;
+1092   5                if(FM_AREA_NUM > 0)
+1093   5                {
+1094   6                  sys_state.FMFreq = FM_FREQ_AREA[0];
+1095   6                  sys_state.FM_CH = 0;            
+1096   6                }
+1097   5                else
+1098   5                {
+1099   6                  sys_state.FMFreq = sys_state.FMFreqTemp;
+1100   6                }
+1101   5                FM_Freq_LED_Display(sys_state.FMFreq);
+1102   5                RDA5807_FreqSet(sys_state.FMFreq);
+1103   5              }
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 19  
+
+1104   4              else
+1105   4              {
+1106   5                RDA5807_FreqSet(FM_AUTO_FREQ);
+1107   5                FM_Freq_LED_Display(FM_AUTO_FREQ);
+1108   5                app_task_time.FMAutoSearch = 10;
+1109   5              }
+1110   4            }
+1111   3            else if(RDA5807_Auto_Search())
+1112   3            {
+1113   4      //        Uart0_Send_nData("FM_SUCC", 7);
+1114   4      ///*
+1115   4      //        FM_FREQ_AREA[FM_AREA_NUM] = FM_AUTO_FREQ;     
+1116   4              FM_FREQ_AREA[FM_AREA_NUM] = sys_state.FMFreq;    //把此电台频率放到 FM_FREQ_AREA[FM_AREA_NUM]中
+1117   4              FM_AREA_NUM++;                                    //电台数+1
+1118   4              sys_state.FM_CH_Num = FM_AREA_NUM;
+1119   4              FM_Channel_LED_Display(FM_AREA_NUM);              //显示电台的个数
+1120   4              fm_keep_flag = 1;                               
+1121   4              app_task_time.FMAutoSearch = 100;
+1122   4      //*/
+1123   4            }
+1124   3            else
+1125   3            {   
+1126   4      //        Uart0_Send_nData("FM_FAIL", 7);
+1127   4      ///*          
+1128   4              sys_state.FMFreq++;                                 //如果没有搜索到台，频率增加
+1129   4      //        FM_AUTO_FREQ++;
+1130   4      //        if(FM_AUTO_FREQ > 1080)
+1131   4              if(sys_state.FMFreq > 1080)                       
+1132   4              {
+1133   5      //          Uart0_Send_nData("FM_OVER", 7);
+1134   5                FM_AUTO_SEARCH_FLAG = 0;                          //如果电台频率>1080时，停止自动搜台
+1135   5                if(FM_AREA_NUM > 0)
+1136   5                {                                               //如果搜到的电台数大于0，则把第一个频率赋给sys_state.FMFfrep
+1137   6                  sys_state.FMFreq = FM_FREQ_AREA[0];             //FM_FREQ_AREA存储搜索存到的电台
+1138   6                  sys_state.FM_CH = 0;            
+1139   6                }
+1140   5                else
+1141   5                {
+1142   6                  sys_state.FMFreq = sys_state.FMFreqTemp;    //如果没有台，则把870赋给sys_state.FMFrep
+1143   6                }
+1144   5                
+1145   5                FM_Freq_LED_Display(sys_state.FMFreq);                
+1146   5                RDA5807_FreqSet(sys_state.FMFreq);
+1147   5              }
+1148   4              else
+1149   4              {
+1150   5      //          RDA5807_FreqSet(FM_AUTO_FREQ);
+1151   5      //          FM_Freq_LED_Display(FM_AUTO_FREQ);
+1152   5                RDA5807_FreqSet(sys_state.FMFreq);                    //设置该频率下的电台
+1153   5                FM_Freq_LED_Display(sys_state.FMFreq);
+1154   5                app_task_time.FMAutoSearch = 10;
+1155   5              }
+1156   4      //*/
+1157   4            }
+1158   3          }
+1159   2        }
+1160   1      }
+1161          
+1162          
+1163          void FM_Channel_Up(void)
+1164          {
+1165   1        if(sys_state.FM_CH_Num > 0)
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 20  
+
+1166   1        {
+1167   2          if(sys_state.FM_CH_Num > (sys_state.FM_CH + 1))
+1168   2          {
+1169   3            sys_state.FM_CH++;
+1170   3          }
+1171   2          else 
+1172   2          {
+1173   3            sys_state.FM_CH = 0;
+1174   3          }
+1175   2          sys_state.FMFreq = FM_FREQ_AREA[sys_state.FM_CH];
+1176   2          FM_Channel_LED_Display(sys_state.FM_CH + 1);
+1177   2          FM_CHANGE_FlAG = 1;
+1178   2          FM_CHANGE_COUNT = 100;
+1179   2      //    FM_Freq_LED_Display(sys_state.FMFreq);
+1180   2      //    RDA5807_FreqSet(sys_state.FMFreq);
+1181   2        }
+1182   1      }
+1183          
+1184          
+1185          void FM_CH_Change(void)
+1186          {
+1187   1        if(FM_CHANGE_FlAG && (FM_CHANGE_COUNT == 0))
+1188   1        {
+1189   2          FM_CHANGE_FlAG = 0;
+1190   2          FM_Freq_LED_Display(sys_state.FMFreq);
+1191   2          RDA5807_FreqSet(sys_state.FMFreq);    
+1192   2        }
+1193   1      }
+1194          
+1195          
+1196          void Enter_Sleep_Conf(void)
+1197          {
+1198   1      //  WDCON |= (7<<5); //关闭看门狗 
+1199   1      
+1200   1      //  INT8EN = 0;  //RTC中断关闭
+1201   1        
+1202   1        GPIO_Init(P31F,OUTPUT);
+1203   1        GPIO_Init(P30F,OUTPUT);
+1204   1        P31 = 0;
+1205   1        P30 = 0;
+1206   1        
+1207   1        SetOutputSCL();
+1208   1        SetOutputSDA();
+1209   1        PLL_SCL(0);
+1210   1        PLL_SDA(0);
+1211   1        
+1212   1        GPIO_Init(P16F, OUTPUT);  //关闭PWM功能
+1213   1        P16 = 0;
+1214   1        
+1215   1        Sys_Clk_Set_XOSCL();  //切换主时钟到XOSCL
+1216   1        
+1217   1        //LED接口
+1218   1        GPIO_Init(LED_COM0, INPUT);
+1219   1        GPIO_Init(LED_COM1, INPUT);
+1220   1        GPIO_Init(LED_COM2, INPUT);
+1221   1        GPIO_Init(LED_COM3, INPUT);
+1222   1        GPIO_Init(LED_COM4, INPUT);
+1223   1        
+1224   1        GPIO_Init(LED_SEG1, INPUT);
+1225   1        GPIO_Init(LED_SEG2, INPUT);
+1226   1        GPIO_Init(LED_SEG3, INPUT);
+1227   1        GPIO_Init(LED_SEG4, INPUT);
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 21  
+
+1228   1        GPIO_Init(LED_SEG5, INPUT);
+1229   1        GPIO_Init(LED_SEG6, INPUT);
+1230   1        GPIO_Init(LED_SEG7, INPUT);
+1231   1        
+1232   1      //  P0 = 0x00;
+1233   1      //  P17 = 0;
+1234   1      //  P35 = 0;
+1235   1      //  P36 = 0;
+1236   1      //  P37 = 0;
+1237   1        
+1238   1        LED_init(LEN_DISABLE, COM_H, SEG_L, LDRV_7, 2);  //关闭LED模块
+1239   1        PWMEN &= ~(1<<PWM_CH1);  //关闭PWM通道
+1240   1        
+1241   1        Timer0_Init(TIMER_Mode0, TIMER_Func_Timing, Enable, TIMER_Gate_Mode_Tr, CL_TIMER_DIV);
+1242   1        TIME_DIV_NUM = CL_TIMER_DIV;
+1243   1        
+1244   1        CKCON = 0;  //关闭除主时钟外的所有时钟
+1245   1        PWCON = (PWCON&0xF0)|0x04; //设置LDO进入低功率模式,LDO输出电压为最大
+1246   1        
+1247   1        
+1248   1      //  MECON |= (1<<6);
+1249   1      //  while(STPSTH|STPSTL);
+1250   1      //  PCON |= 0x02;
+1251   1      //  _nop_();
+1252   1      //  _nop_();
+1253   1      //  _nop_();
+1254   1      }
+1255          
+1256          
+1257          void Quit_Sleep_Conf(void)
+1258          {
+1259   1        Sys_Clk_Set_IRCH();  //切换主时钟到IRCH
+1260   1        
+1261   1        CKCON |= XLCKE;
+1262   1        while(!(CKCON & XLSTA));
+1263   1        PWCON = (PWCON&0xF0)|0x0C;  //LDO高功率模式,输出电压1.58V
+1264   1        
+1265   1      //  INT8EN = 1;
+1266   1        
+1267   1        Timer0_Init(TIMER_Mode0, TIMER_Func_Timing, Enable, TIMER_Gate_Mode_Tr, TIMER_DIV);
+1268   1        TIME_DIV_NUM = TIMER_DIV;
+1269   1      
+1270   1        //LED接口
+1271   1        GPIO_Init(LED_COM0, P00_COM0_SETTING);
+1272   1        GPIO_Init(LED_COM1, P01_COM1_SETTING);
+1273   1        GPIO_Init(LED_COM2, P02_COM2_SETTING);
+1274   1        GPIO_Init(LED_COM3, P03_COM3_SETTING);
+1275   1        GPIO_Init(LED_COM4, P04_COM4_SETTING);
+1276   1        
+1277   1        GPIO_Init(LED_SEG1, P17_SEG0_SETTING);
+1278   1        GPIO_Init(LED_SEG2, P37_SEG1_SETTING);
+1279   1        GPIO_Init(LED_SEG3, P36_SEG2_SETTING);
+1280   1        GPIO_Init(LED_SEG4, P35_SEG3_SETTING);
+1281   1        GPIO_Init(LED_SEG5, P07_SEG5_SETTING);
+1282   1        GPIO_Init(LED_SEG6, P06_SEG6_SETTING);
+1283   1        GPIO_Init(LED_SEG7, P05_SEG7_SETTING);
+1284   1        LED_init(LEN_IRCH, COM_H, SEG_L, LDRV_7, 2);  //LED模块
+1285   1        
+1286   1        GPIO_Init(P31F,P31_UART0_RX_SETTING);
+1287   1        GPIO_Init(P30F,P30_UART0_TX_SETTING);
+1288   1        
+1289   1        GPIO_Init(P16F, P16_PWM1_SETTING);
+C51 COMPILER V9.52.0.0   APP_TASK                                                          07/24/2018 11:06:11 PAGE 22  
+
+1290   1        GPIO_Init(P34F, P34_PWM3_SETTING);
+1291   1        PWM_EnContrl(1<<PWM_CH1);
+1292   1      //  SetOutputSCL();
+1293   1      //  SetOutputSDA();
+1294   1      //  PLL_SCL(0);
+1295   1      //  PLL_SDA(0);
+1296   1      }
+1297          
+1298          #endif
+1299          
+1300          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   3214    ----
+   CONSTANT SIZE    =    177    ----
+   XDATA SIZE       =    114       6
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----       6
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,1 @@
+"..\..\Library\Sources\stop_idle.c" ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\stop_idle.lst) TABS (2) OBJECT(.\hex\stop_idle.obj)

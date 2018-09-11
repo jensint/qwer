@@ -1,0 +1,70 @@
+C51 COMPILER V9.51   MAIN                                                                  06/30/2017 18:43:56 PAGE 1   
+
+
+C51 COMPILER V9.51, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\hex\main.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\main.lst) TABS(2)
+                    - OBJECT(.\hex\main.obj)
+
+line level    source
+
+   1          #ifndef _MAIN_C_
+   2          #define _MAIN_C_
+   3          
+   4          /*********************************************************************************************************
+             -************/
+   5          #include "ca51f_config.h"
+   6          #if (IC_TYPE == IC_TYPE_CA51F2X)
+              #include "../../includes/ca51f2sfr.h"
+              #include "../../includes/ca51f2xsfr.h"
+              #include "../../includes/gpiodef_f2.h"
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+  11          #include "../../includes/ca51f3sfr.h"
+  12          #include "../../includes/ca51f3xsfr.h"
+  13          #include "../../includes/gpiodef_f3.h"
+  14          #endif
+  15          #include "../../includes/system.h"
+  16          #include "../../Library/includes/uart.h"
+  17          #include "../../Library/includes/adc.h"
+  18          #include "key.h"
+  19          #include "ad_key.h"
+  20          #include <intrins.h>
+  21          
+  22          void main(void)
+  23          {
+  24   1      #ifdef UART0_EN
+  25   1        Uart0_Initial(UART0_BAUTRATE);
+  26   1      #endif
+  27   1      #ifdef UART1_EN
+                Uart1_Initial(UART1_BAUTRATE);
+              #endif
+  30   1      #ifdef UART2_EN
+                Uart2_Initial(UART2_BAUTRATE);
+              #endif
+  33   1      
+  34   1        EA = 1;
+  35   1      
+  36   1      #ifdef PRINT_EN
+  37   1        uart_printf("AD Key example!\n");
+  38   1      #endif
+  39   1        
+  40   1        ADKey_MainLoop();
+  41   1        while(1);
+  42   1      }
+  43          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     27    ----
+   CONSTANT SIZE    =     17    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+C51 COMPILER V9.51   MAIN                                                                  06/30/2017 18:43:56 PAGE 2   
+
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

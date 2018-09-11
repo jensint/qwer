@@ -1,0 +1,1513 @@
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE TS_SEVICE
+OBJECT MODULE PLACED IN .\Output\ts_sevice.obj
+COMPILER INVOKED BY: E:\Keil\C51\BIN\C51.EXE TS_Lib\Sources\ts_sevice.c LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\Us
+                    -er;.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\ts_sevice.lst) TABS(2) OBJECT(.\Output\ts_sevice
+                    -.obj)
+
+line level    source
+
+   1          #ifndef _TS_SERVICE_C_
+   2          #define _TS_SERVICE_C_
+   3          
+   4          /*********************************************************************************************************
+             -************/
+   5          #include "ca51f_config.h"
+   6          #if (IC_TYPE == IC_TYPE_CA51F2X)
+              #include "ca51f2sfr.h"
+              #include "ca51f2xsfr.h"
+              #include "gpiodef_f2.h"
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+  11          #include "ca51f3sfr.h"
+  12          #include "ca51f3xsfr.h"
+  13          #include "gpiodef_f3.h"
+  14          #endif
+  15          #include "system.h"
+  16          #include "rtc.h"    
+  17          #include "system_clock.h"   
+  18          #include "uart.h"
+  19          #include "delay.h"
+  20          #include <intrins.h>
+  21          /*********************************************************************************************************
+             -************/
+  22          #include "ts_configuration.h"
+  23          #include "ts_def.h"
+  24          #include "ts_api.h"
+  25          #include "ts_service.h"     
+  26          /*********************************************************************************************************
+             -************/
+  27          code unsigned int TS_CH_INFO_SEQ[][2]=
+  28          {
+  29          #if SUPPORT_KEY
+  30            KEY_SEQ
+  31          #endif
+  32          #if SUPPORT_WHEEL_SLIDER
+              #if (WHEEL_SLIDER_COUNT > 0)
+                WHEEL_SLIDER0_SEQ
+              #endif
+              #if (WHEEL_SLIDER_COUNT > 1)
+                WHEEL_SLIDER1_SEQ
+              #endif
+              #if (WHEEL_SLIDER_COUNT > 2)
+                WHEEL_SLIDER2_SEQ
+              #endif
+              #if (WHEEL_SLIDER_COUNT > 3)
+                WHEEL_SLIDER3_SEQ
+              #endif
+              #endif
+  46          #if SUPPORT_WATER_DETECT
+                {WATER_REF_CAP_CH,0},
+                {WATER_DET_CH,0},
+              #endif
+  50          };
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 2   
+
+  51          #if SUPPORT_WHEEL_SLIDER
+              code unsigned char SLIDER_CH_COUNT[]=
+              {
+                WHEEL_SLIDER0_CH_COUNT,
+              #if (WHEEL_SLIDER_COUNT > 1)
+                WHEEL_SLIDER1_CH_COUNT,
+              #endif
+              #if (WHEEL_SLIDER_COUNT > 2)
+                WHEEL_SLIDER2_CH_COUNT,
+              #endif  
+              #if (WHEEL_SLIDER_COUNT > 2)
+                WHEEL_SLIDER3_CH_COUNT,
+              #endif  
+              };
+              code unsigned char WHEEL_SLIDER0_MAX_RATE_TAB[]={WHEEL_SLIDER0_CH_MAX_RATE};
+              #if (WHEEL_SLIDER_COUNT > 1)
+              code unsigned char WHEEL_SLIDER1_MAX_RATE_TAB[]={WHEEL_SLIDER1_CH_MAX_RATE};
+              #endif
+              #if (WHEEL_SLIDER_COUNT > 2)
+              code unsigned char WHEEL_SLIDER2_MAX_RATE_TAB[]={WHEEL_SLIDER2_CH_MAX_RATE};
+              #endif
+              #if (WHEEL_SLIDER_COUNT > 3)
+              code unsigned char WHEEL_SLIDER3_MAX_RATE_TAB[]={WHEEL_SLIDER2_CH_MAX_RATE};
+              #endif
+              code unsigned char *WHEEL_SLIDER_MAX_RATE[]=
+              {
+                WHEEL_SLIDER0_MAX_RATE_TAB,
+              #if (WHEEL_SLIDER_COUNT > 1)
+                WHEEL_SLIDER1_MAX_RATE_TAB,
+              #endif
+              #if (WHEEL_SLIDER_COUNT > 2)
+                WHEEL_SLIDER2_MAX_RATE_TAB,
+              #endif
+              #if (WHEEL_SLIDER_COUNT > 3)
+                WHEEL_SLIDER3_MAX_RATE_TAB,
+              #endif
+              };
+              code unsigned char POSITION_CORRECTION_FACTOR[]=
+              {
+                WHEEL_SLIDER0_POSITION_CORRECTION_FACTOR,
+              #if (WHEEL_SLIDER_COUNT > 1)
+                WHEEL_SLIDER1_POSITION_CORRECTION_FACTOR,
+              #endif
+              #if (WHEEL_SLIDER_COUNT > 2)
+                WHEEL_SLIDER2_POSITION_CORRECTION_FACTOR,
+              #endif  
+              #if (WHEEL_SLIDER_COUNT > 3)
+                WHEEL_SLIDER3_POSITION_CORRECTION_FACTOR,
+              #endif  
+              };
+              #endif
+ 102          //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 103          //´¥Ãþ¹Ü½Å³õÊ¼»¯
+ 104          //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ 105          void TS_IO_init(void)
+ 106          {
+ 107   1        unsigned char i;
+ 108   1      #if (IC_TYPE == IC_TYPE_CA51F2X)
+                code unsigned char *pXSFR[]=
+                {
+                  &P70F,
+                  &P67F,
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 3   
+
+                  &P66F,
+                  &P37F,
+                  &P36F,
+                  &P33F,
+                  &P32F,
+                  &P47F,
+                  &P46F,
+                  &P45F,
+                  &P44F,
+                  &P43F,
+                  &P42F,
+                  &P41F,
+                  &P40F,
+                  &P34F,
+                  &P35F,
+                  &P56F,
+                  &P50F,
+                  &P51F,
+                  &P52F,
+                  &P53F,
+                  &P54F,
+                  &P55F,
+                };
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+ 137   1        code unsigned char *pXSFR[]=
+ 138   1        {
+ 139   1          &P10F,
+ 140   1          &P11F,
+ 141   1          &P12F,
+ 142   1          &P13F,
+ 143   1          &P14F,
+ 144   1          &P15F,
+ 145   1          &P16F,
+ 146   1          &P17F,
+ 147   1          &P37F,
+ 148   1          &P36F,
+ 149   1          &P35F,
+ 150   1          &P34F,
+ 151   1          &P07F,
+ 152   1          &P06F,
+ 153   1          &P05F,
+ 154   1          &P04F,
+ 155   1          &P03F,
+ 156   1          &P02F,
+ 157   1          &P01F,
+ 158   1          &P00F,
+ 159   1        };     
+ 160   1      #endif
+ 161   1        unsigned char *pPinS;
+ 162   1      #if (IC_TYPE == IC_TYPE_CA51F2X)
+                GPIO_Init(P57F,P57_CAP_SETTING);
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+ 165   1        GPIO_Init(P21F,P21_CAP_SETTING);
+ 166   1      #endif
+ 167   1        for(i = 0; i < OPENED_TS_COUNT; i++)
+ 168   1        {
+ 169   2          pPinS = pXSFR[TS_CH_INFO_SEQ[i][0]&0x7F];
+ 170   2          *pPinS = 4;
+ 171   2        }
+ 172   1      }
+ 173          #if SUPPORT_KEY
+ 174          code unsigned long int MASK_TAB[24]=
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 4   
+
+ 175          {
+ 176            0x000001,
+ 177            0x000002,
+ 178            0x000004,
+ 179            0x000008,
+ 180            0x000010,
+ 181            0x000020,
+ 182            0x000040,
+ 183            0x000080,
+ 184            0x000100,
+ 185            0x000200,
+ 186            0x000400,
+ 187            0x000800,
+ 188            0x001000,
+ 189            0x002000,
+ 190            0x004000,
+ 191            0x008000,
+ 192            0x010000,
+ 193            0x020000,
+ 194            0x040000,
+ 195            0x080000,
+ 196            0x100000,
+ 197            0x200000,
+ 198            0x400000,
+ 199            0x800000,
+ 200          };
+ 201          #endif
+ 202          
+ 203          void TS_MS_ISR (void)
+ 204          {
+ 205   1        static unsigned char xdata ms_cnt = 0;
+ 206   1        unsigned char i;
+ 207   1       
+ 208   1        if(TS_InitTimer) 
+ 209   1        {
+ 210   2          TS_InitTimer--;
+ 211   2        }
+ 212   1        ms_cnt++;
+ 213   1        if(ms_cnt >= 4)
+ 214   1        {
+ 215   2          ms_cnt = 0;
+ 216   2          for(i = 0; i < OPENED_TS_COUNT; i++)
+ 217   2          {
+ 218   3            if(TS_AreaConfirmTimer[i])
+ 219   3            {
+ 220   4              TS_AreaConfirmTimer[i]--;
+ 221   4            }
+ 222   3          }
+ 223   2      
+ 224   2      #if SUPPORT_WHEEL_SLIDER
+                  for(i = 0; i < WHEEL_SLIDER_COUNT; i++)
+                  {
+                    if(TSWheelSlider_TouchConfirmTimer[i])
+                    {
+                      TSWheelSlider_TouchConfirmTimer[i]--;
+                    }
+                  } 
+              #endif
+ 233   2        } 
+ 234   1      }
+ 235          void TS_HS_ISR (void)
+ 236          {
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 5   
+
+ 237   1        unsigned char i;
+ 238   1      #if SUPPORT_KEY
+ 239   1      #if (FINGER_LONG_TOUCH_TIME_LIMIT > 0)
+ 240   1        for(i = 0; i < KEY_CH_COUNT; i++)
+ 241   1        {
+ 242   2          if(TSKey_LongTouchLimitTimer[i])
+ 243   2          {
+ 244   3            TSKey_LongTouchLimitTimer[i]--;
+ 245   3          }
+ 246   2        }
+ 247   1      #endif
+ 248   1      #endif
+ 249   1        
+ 250   1      #if SUPPORT_WHEEL_SLIDER  
+              #if (WHEEL_SLIDER_LONG_TOUCH_TIME_LIMIT > 0)
+                for(i = 0; i < WHEEL_SLIDER_COUNT; i++)
+                {
+                  if(TSWheelSlider_LongTouchLimitTimer[i])
+                  {
+                    TSWheelSlider_LongTouchLimitTimer[i]--;
+                  }
+                }
+              #endif
+              #endif
+ 261   1        
+ 262   1        if(TS_RefCHBaseLineAdjuTimer)
+ 263   1        {
+ 264   2          TS_RefCHBaseLineAdjuTimer--;
+ 265   2        } 
+ 266   1      #if (SUPPORT_STOP_MODE_AUTO_SCAN || SUPPORT_STOP_MODE_MANUAL_SCAN)
+                if(EnterStopScanTimer)
+                {
+                  EnterStopScanTimer--;
+                } 
+              #endif  
+ 272   1      }
+ 273          void TS_ISR (void)
+ 274          { 
+ 275   1        unsigned char index_copy,i;
+ 276   1        WORD_UNION TS_Data[6];
+ 277   1      
+ 278   1        index_copy = INDEX;
+ 279   1        for(i = 0; i < 6; i++)
+ 280   1        {
+ 281   2          if(TKIF & (1<<i))
+ 282   2          {
+ 283   3            TKIF = (1<<i);  
+ 284   3            INDEX = i;
+ 285   3            TS_Data[i].bVal[0] = TKMSH;
+ 286   3            TS_Data[i].bVal[1] = TKMSL;
+ 287   3          }
+ 288   2        }
+ 289   1        for(i = 0; i < 6; i++)
+ 290   1        {
+ 291   2          if(TS_Index+i == OPENED_TS_COUNT)
+ 292   2          {
+ 293   3            TS_RefChRawData = TS_Data[i].wVal;  
+ 294   3            break;
+ 295   3          }
+ 296   2          TS_RawData[TS_Index+i] = TS_Data[i].wVal; 
+ 297   2        }
+ 298   1        if(TS_Index+6 > OPENED_TS_COUNT)
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 6   
+
+ 299   1        {
+ 300   2          TS_CycleScanDoneFlag = 1;       
+ 301   2        }
+ 302   1        else 
+ 303   1        {
+ 304   2          TS_Index += 6;
+ 305   2          TS_ScanStart(); 
+ 306   2        }
+ 307   1        INDEX = index_copy;
+ 308   1      }
+ 309          
+ 310          void TS_ScanStart(void)
+ 311          { 
+ 312   1        unsigned char i,j;     
+ 313   1        for(i = 0; i < 6; i++)          
+ 314   1        {
+ 315   2          if(TS_Index + i >= OPENED_TS_COUNT)
+ 316   2          {
+ 317   3            INDEX = i;
+ 318   3      #if  (IC_TYPE == IC_TYPE_CA51F2X)
+                    TKCHS = POL(0) | NPOL(1) | TKCHS(25);
+              #elif  (IC_TYPE == IC_TYPE_CA51F3X) 
+ 321   3            TKCHS = POL(0) | NPOL(1) | TKCHS(21);
+ 322   3      #endif  
+ 323   3            for(j = i+1; j < 6; j++)
+ 324   3            {
+ 325   4              INDEX = j;
+ 326   4              TKCHS = POL(0) | NPOL(1) | TKCHS(0);  
+ 327   4            }
+ 328   3            break;
+ 329   3          }
+ 330   2          INDEX = i;
+ 331   2          TKCHS = POL(0) | NPOL(1) | TKCHS(((unsigned char)TS_CH_INFO_SEQ[TS_Index+i][0]&0x7F)+1);  
+ 332   2          
+ 333   2        }
+ 334   1        TKCON |= TKST(1);
+ 335   1      }
+ 336          #if (SUPPORT_STOP_MODE_AUTO_SCAN || SUPPORT_STOP_MODE_MANUAL_SCAN)
+              void TS_GetWakeupChInfo(void)
+              {
+                unsigned char i;
+                StopScanChCnt = 0;
+                for(i = 0; i < OPENED_TS_COUNT; i++)  
+                {
+                  if(TS_CH_INFO_SEQ[i][0] & WAKEUP)
+                  {
+                    StopScanCh[StopScanChCnt] = (TS_CH_INFO_SEQ[i][0]&0x7F)+1;
+                    WakeUp_DeltaVal[StopScanChCnt] = (unsigned char)((TS_CH_INFO_SEQ[i][1]*WAKEUP_THRESHOLD_RATE)/100);
+                    StopScanChCnt++;  
+                  }       
+                } 
+              }
+              #endif
+ 352          #if SUPPORT_STOP_MODE_AUTO_SCAN
+              void TS_EnterStopModeAutoScan(void)
+              {
+                unsigned char i;
+                unsigned int ts_data;
+                unsigned char Count = 0;
+              #if (RTC_CLK_SELECT == IRCL)
+                unsigned char ilh,ill;
+              #endif
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 7   
+
+                EA = 0;
+                for(i = 0; i < 6; i++)  
+                {
+                  INDEX = i;
+                  if(i < StopScanChCnt)
+                  {
+                    TKCHS = POL(0) | NPOL(1) | TKCHS(StopScanCh[i]);  
+                  }
+                  else
+                  {
+                    TKCHS = POL(0) | NPOL(1) | 0; 
+                  }
+                }
+              
+                RTCON &=  ~(MSE(1) | HSE(1));
+              #if (RTC_CLK_SELECT == IRCL)  
+                TKMTS = (SAVE_MODE_SCAN_INTERVAL_TIME*11)/20;
+              #elif (RTC_CLK_SELECT == XOSCL)
+                TKMTS = SAVE_MODE_SCAN_INTERVAL_TIME;
+              #endif  
+              //  TKCON |= TMEN(1)|TWKE(1);
+                TKCON = (TKCON&0xF8) | VRS(STOP_VRS_VAL);
+                TKCON |= TMEN(1);
+                TKCFG = TKDIV(STOP_TKDIV_VAL)|TKTMS(STOP_TKTMS_VAL);      
+              
+              #if (RTC_CLK_SELECT == IRCL)  
+                ilh = ILCFGH;
+                ill = ILCFGL;
+                
+                ILCFGH  = ILH_72K ;
+                ILCFGL  = ILL_72K;  
+              #endif
+              #if (SYSCLK_SRC == PLL)
+                Sys_Clk_Set_IRCH();
+                PLLCON = 0;
+              #endif
+                I2CCON = 0;
+                CKCON = 0;
+                  
+                MECON |= BIT6;
+                
+                PWCON = PWCON&(~0x08);  
+                TKIF = 0x3F;
+                TKCON |= TKST(1);
+                while(1)
+                {
+                  if(!(PCON & BIT2))  // ÔÚ·ÂÕæÄ£Ê½²»½øÈëSTOPÄ£Ê½
+                  {
+                    PCON |= (1<<1);
+                  }
+                  _nop_();
+                  _nop_();
+                  if(TKIF != 0)
+                  {
+                    if(Count<0xff) Count++;
+                    if(Count < 10)
+                    {
+                      TKIF = 0x3F;
+                    }
+                    else if(Count == 10)
+                    {
+                      for(i = 0; i < 6; i++)
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 8   
+
+                      {
+                        if(TKIF & (1<<i))
+                        {
+                          INDEX = i;
+                          ts_data = TKMSH*256 + TKMSL;
+                          
+                          WakeUp_ThdVal[i] = ts_data - (unsigned int)WakeUp_DeltaVal[i];
+                          ATKCH = (unsigned char)(WakeUp_ThdVal[i]>>8); 
+                          ATKCL = (unsigned char)(WakeUp_ThdVal[i]);        
+                          WakeUp_ThdVal[i] = ts_data + (unsigned int)WakeUp_DeltaVal[i];
+                          ATKNH = (unsigned char)(WakeUp_ThdVal[i]>>8); 
+                          ATKNL = (unsigned char)(WakeUp_ThdVal[i]);        
+                        }
+                      }
+                      TKCON |= TWKE(1);
+                      TKIF = 0x3F;
+                      TKCON |= TKST(1);
+                    }
+                    else if(Count > 10)
+                    {
+                      PWCON |= 0x08;  
+                      TKIF = 0x3F;
+                #if (SYSCLK_SRC == PLL)
+                      Sys_Clk_Set_PLL(PLL_Multiple);  
+                #endif
+              #if (RTC_CLK_SELECT == IRCL)
+                      ILCFGH  =   ilh ;
+                      ILCFGL  =   ill;
+              #endif
+              
+                      TKCON = TKST(0)|TKIE(1)|TMEN(0)|TWKE(0)|VRS(VRS_VAL);
+                      TKCFG = TKDIV(TKDIV_VAL)|TKTMS(TKTMS_VAL);  
+              
+                      RTCON |=  (MSE(1) | HSE(1));
+                      TS_Index = 0;
+                      TS_ScanStart();
+                      EnterStopScanTimer = ENTER_STOP_MODE_TIME;    
+                      EA = 1;
+                      break;        
+                    }     
+                  } 
+                }
+              }
+              #endif
+ 467          #if SUPPORT_STOP_MODE_MANUAL_SCAN
+              void TS_SetStopScanCh(unsigned char idx)
+              {
+                unsigned char i;
+                for(i = 0; i < 6; i++)  
+                {
+                  INDEX = i;
+                  if(i+idx < StopScanChCnt)
+                  {
+                    TKCHS = POL(0) | NPOL(1) | TKCHS(StopScanCh[idx+i]);        
+                  }
+                  else
+                  {
+                    TKCHS = POL(0) | NPOL(1) | 0;   
+                  }     
+                } 
+              }
+              void TS_EnterStopModeManaulScan(void)
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 9   
+
+              {
+                unsigned char i,ts_idx;
+                unsigned char Count = 0;
+                unsigned int ts_data;
+              #if (RTC_CLK_SELECT == IRCL)
+                unsigned char ilh,ill;
+              #endif
+                EA = 0;
+                
+                RTCON &=  ~(MSE(1) | HSE(1));
+                RTCIF = RTC_MF | RTC_HF;    
+                
+                TKCON = (TKCON&0xF8) | VRS(STOP_VRS_VAL);
+                TKCON |= TMEN(1);
+                TKCFG = TKDIV(STOP_TKDIV_VAL)|TKTMS(STOP_TKTMS_VAL);    
+              #if (RTC_CLK_SELECT == IRCL)  
+                TKMTS = (SAVE_MODE_SCAN_INTERVAL_TIME*11)/20;
+                ilh = ILCFGH;
+                ill = ILCFGL;
+                
+                ILCFGH  = ILH_72K ;
+                ILCFGL  = ILL_72K;
+              #elif (RTC_CLK_SELECT == XOSCL)
+                TKMTS = SAVE_MODE_SCAN_INTERVAL_TIME;
+              #endif
+              
+              #if (SYSCLK_SRC == PLL)
+                Sys_Clk_Set_IRCH();
+                PLLCON = 0;
+              #endif
+                I2CCON = 0;
+                CKCON = 0;
+                  
+                MECON |= BIT6;
+                
+                TKIF = 0x3F;
+                PWCON = PWCON&(~0x08);  
+                ts_idx = 0;
+                TS_SetStopScanCh(ts_idx);
+                TKCON |= TKST(1);
+                while(1)
+                {
+                  if(!(PCON & BIT2))  // ÔÚ·ÂÕæÄ£Ê½²»½øÈëSTOPÄ£Ê½
+                  {
+                    PCON |= (1<<1);
+                  }
+                  
+                  _nop_();
+                  _nop_();
+                  if(TKIF != 0)
+                  {
+                    for(i = 0; i < 6; i++)
+                    {
+                      if(TKIF & (1<<i))
+                      {
+                        INDEX = i;
+                        ts_data = TKMSH*256 + TKMSL;
+                        
+                        if(Count == 2)
+                        {
+                          WakeUp_ThdVal[ts_idx + i] = ts_data - (unsigned int)WakeUp_DeltaVal[ts_idx + i];
+                        }
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 10  
+
+                        else if(Count > 2)
+                        {
+                          if(ts_data <= WakeUp_ThdVal[ts_idx + i])
+                          {
+                            
+                            PWCON |= 0x08;  
+                            TKIF = 0x3F;    
+              #if (SYSCLK_SRC == PLL)
+                            Sys_Clk_Set_PLL(PLL_Multiple);  
+              #endif
+              #if (RTC_CLK_SELECT == IRCL)  
+                            ILCFGH  =   ilh ;
+                            ILCFGL  =   ill;
+              #endif
+                            TKCON = TKST(0)|TKIE(1)|TMEN(0)|TWKE(0)|VRS(VRS_VAL);
+                            TKCFG = TKDIV(TKDIV_VAL)|TKTMS(TKTMS_VAL);  
+                          
+                            RTCON |= HSE(1)|MSE(1);
+                          
+                            TS_Index = 0;
+                            TS_ScanStart();
+                            EnterStopScanTimer = ENTER_STOP_MODE_TIME;  
+                            EA = 1;
+                            return;       
+                          }
+                        }
+                      }
+                    } 
+                    if((ts_idx + 6) >= StopScanChCnt)
+                    {
+                      ts_idx = 0;
+                      if(Count<0xff) Count++;
+                    }
+                    else
+                    {
+                      ts_idx += 6;
+                    }     
+                    TS_SetStopScanCh(ts_idx); 
+                    TKIF = 0x3F;
+                  }
+                }
+              
+              }
+              #endif
+ 591          void TS_RunInit(void)
+ 592          {
+ 593   1        unsigned char i,j;
+ 594   1      
+ 595   1        static unsigned char TS_ScanTimes=0;
+ 596   1        
+ 597   1        if(TS_Init_Step == 0)
+ 598   1        {
+ 599   2          if(!TS_InitTimer)
+ 600   2          {
+ 601   3            TS_InitTimer = 2;
+ 602   3            TS_Init_Step = 1; 
+ 603   3          }
+ 604   2        }
+ 605   1        else if(TS_Init_Step == 1)
+ 606   1        {
+ 607   2          TS_Index = 0;
+ 608   2          TS_ScanStart(); 
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 11  
+
+ 609   2          TS_Init_Step = 2;   
+ 610   2          TS_ScanTimes = 50;    
+ 611   2        }
+ 612   1        else if(TS_Init_Step == 2)
+ 613   1        {
+ 614   2          if(TS_CycleScanDoneFlag)
+ 615   2          {
+ 616   3            TS_CycleScanDoneFlag = 0;
+ 617   3            if(--TS_ScanTimes)
+ 618   3            {
+ 619   4              TS_Index = 0;
+ 620   4              TS_ScanStart();           
+ 621   4              return;
+ 622   4            }
+ 623   3            TS_RefCHBaseLineAdjuTimer = 0;
+ 624   3            for(i = 0; i < OPENED_TS_COUNT; i++)
+ 625   3            { 
+ 626   4              for(j = 0; j < FILTER_COUNT; j++)
+ 627   4              {
+ 628   5                TS_FilterBuf[i][j] = TS_RawData[i];
+ 629   5              }
+ 630   4              TS_FilterPosIdx[i] = 0;
+ 631   4      #if (SUPPORT_KEY || SUPPORT_WHEEL_SLIDER)       
+ 632   4              TS_BaseLineData[i] = TS_RawData[i];     
+ 633   4              TS_FirstAreaData[i] = TS_RawData[i]; 
+ 634   4              TS_AreaConfirmTimerSet(i,AREA_PNOISE);
+ 635   4      #endif
+ 636   4            } 
+ 637   3      #if ANTI_SPEAKPHONE
+                    for(j = 0; j < FILTER_COUNT; j++)
+                    {
+                      TS_RefFilterBuf[j] = TS_RefChRawData;
+                    }
+                    TS_RefFilterPosIdx = 0;
+                    TS_RefChBaseLineData  = TS_RefChRawData;  
+              #endif
+ 645   3            
+ 646   3      #if SUPPORT_WATER_DETECT
+                    WaterDetCapRateFilterCnt = 0;
+                    WaterDetCapRateFilterBuf = 0;
+                    WaterFlag = 0;
+              #endif
+ 651   3            
+ 652   3            TS_State = TS_DEAL; 
+ 653   3      #if SUPPORT_KEY
+ 654   3            OverHighFlag = 0;
+ 655   3      #endif
+ 656   3            TS_Index = 0;
+ 657   3            TS_ScanStart();             
+ 658   3          }
+ 659   2        }
+ 660   1      }
+ 661          #if (SUPPORT_KEY || SUPPORT_WHEEL_SLIDER)
+ 662          unsigned char TS_GetDataArea(unsigned char ts_ch,unsigned int ts_data)
+ 663          {
+ 664   1        int Delta;
+ 665   1        int NoiseThd,FingerThd;
+ 666   1        
+ 667   1        Delta   = (int)TS_BaseLineData[ts_ch] - (int)ts_data;
+ 668   1        if((ts_ch < KEY_CH_COUNT)&&(KeysFlagSN & MASK_TAB[ts_ch]))
+ 669   1        {
+ 670   2          FingerThd = (TS_CH_INFO_SEQ[ts_ch][1]*(FINGER_TOUCH_THRESHOLD_RATE-10))/100;  
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 12  
+
+ 671   2        }
+ 672   1        else
+ 673   1        {
+ 674   2          FingerThd = (TS_CH_INFO_SEQ[ts_ch][1]*FINGER_TOUCH_THRESHOLD_RATE)/100;   
+ 675   2        }
+ 676   1        
+ 677   1        NoiseThd  =   (TS_CH_INFO_SEQ[ts_ch][1]*NOISE_THRESHOLD_RATE)/100;  
+ 678   1      
+ 679   1        if(Delta >= FingerThd)  return AREA_FINGER_TOUCH; 
+ 680   1        else if(Delta > NoiseThd) return AREA_PNOISE_PLUS; 
+ 681   1        else if(Delta >= 0)     return AREA_PNOISE;
+ 682   1        else if(Delta >= -NoiseThd) return AREA_NNOISE;
+ 683   1        else            return AREA_OVER_LOW;
+ 684   1      
+ 685   1      }
+ 686          unsigned char TS_AreaDeviateDetection(  unsigned char ts_ch,unsigned int cmp_data,unsigned int real_data,un
+             -signed char area)
+ 687          { 
+ 688   1        int Delta,permit_devia;
+ 689   1        unsigned char rate;
+ 690   1        switch(area)
+ 691   1        {
+ 692   2          case AREA_PNOISE_PLUS:
+ 693   2            rate = AREA_PNOISE_PLUS_PERMITTED_DEVIATION_RATE;
+ 694   2            break;
+ 695   2          case AREA_PNOISE:
+ 696   2            rate = AREA_PNOISE_PERMITTED_DEVIATION_RATE;
+ 697   2            break;
+ 698   2          case AREA_NNOISE:
+ 699   2            rate = AREA_NNOISE_PERMITTED_DEVIATION_RATE;
+ 700   2            break;
+ 701   2          case AREA_OVER_LOW:
+ 702   2            rate = AREA_OVERLOW_PERMITTED_DEVIATION_RATE;
+ 703   2            break;
+ 704   2          default:
+ 705   2            break;
+ 706   2        }
+ 707   1        permit_devia = (TS_CH_INFO_SEQ[ts_ch][1]*rate)/100;
+ 708   1      
+ 709   1        Delta   = (int)cmp_data - (int)real_data;
+ 710   1      
+ 711   1        if((Delta <= permit_devia) && (Delta >= -permit_devia))
+ 712   1        {
+ 713   2          return 1;
+ 714   2        }
+ 715   1        else
+ 716   1        {
+ 717   2          return 0; 
+ 718   2        }   
+ 719   1      }
+ 720          void TS_AreaConfirmTimerSet(unsigned char ts_ch, unsigned char area)
+ 721          {
+ 722   1        unsigned char set_value;
+ 723   1      
+ 724   1        switch(area)
+ 725   1        {
+ 726   2          case AREA_FINGER_TOUCH:
+ 727   2      #if SUPPORT_KEY
+ 728   2            set_value = FINGER_TOUCH_CONFIRM_TIME;
+ 729   2      #endif
+ 730   2            break;
+ 731   2          case AREA_PNOISE_PLUS:
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 13  
+
+ 732   2            set_value = AREA_PNOISE_PLUS_CONFIRM_TIME;
+ 733   2            break;
+ 734   2          case AREA_PNOISE:
+ 735   2            set_value = AREA_PNOISE_CONFIRM_TIME;
+ 736   2            break;
+ 737   2          case AREA_NNOISE:
+ 738   2            set_value = AREA_NNOISE_CONFIRM_TIME;
+ 739   2            break;
+ 740   2          case AREA_OVER_LOW:
+ 741   2            set_value = AREA_OVERLOW_CONFIRM_TIME;
+ 742   2            break;
+ 743   2          default:
+ 744   2            break;
+ 745   2        }
+ 746   1        TS_AreaConfirmTimer[ts_ch] = set_value; 
+ 747   1      }
+ 748          #endif
+ 749          unsigned int GetMidVal(unsigned int *pBuf)
+ 750          {
+ 751   1        unsigned char i,j;
+ 752   1        unsigned int temp;
+ 753   1        unsigned int idata BufTmp[FILTER_COUNT];
+ 754   1        for(i = 0; i < FILTER_COUNT; i++)
+ 755   1        {
+ 756   2          BufTmp[i]= *pBuf++;
+ 757   2        }
+ 758   1        for(i = 0; i < (FILTER_COUNT/2 + 1); i++)
+ 759   1        {
+ 760   2          for(j = 0; j < FILTER_COUNT-1-i; j++)
+ 761   2          {
+ 762   3            if(BufTmp[j] > BufTmp[j+1])
+ 763   3            {
+ 764   4              temp = BufTmp[j];
+ 765   4              BufTmp[j] = BufTmp[j+1];
+ 766   4              BufTmp[j+1] = temp;
+ 767   4            }
+ 768   3          }
+ 769   2        }
+ 770   1      #if (FILTER_COUNT%2)
+ 771   1        return BufTmp[FILTER_COUNT/2];
+ 772   1      #else
+                return (BufTmp[FILTER_COUNT/2-1] + BufTmp[FILTER_COUNT/2])/2; 
+              #endif
+ 775   1      }
+ 776          void TS_DataFiltering(void)
+ 777          {
+ 778   1        unsigned char i;
+ 779   1        for(i = 0; i < OPENED_TS_COUNT; i++)
+ 780   1        {
+ 781   2          TS_FilterPosIdx[i]++;
+ 782   2          if(TS_FilterPosIdx[i] >= FILTER_COUNT) 
+ 783   2          {
+ 784   3            TS_FilterPosIdx[i] = 0;
+ 785   3          }
+ 786   2          TS_FilterBuf[i][TS_FilterPosIdx[i]] = TS_RawData[i];
+ 787   2          TS_PostData[i] = GetMidVal(TS_FilterBuf[i]);            
+ 788   2        }   
+ 789   1      }
+ 790          #if SUPPORT_KEY
+ 791          void TSKey_DataDeal(void)
+ 792          {
+ 793   1        unsigned char i;
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 14  
+
+ 794   1        unsigned char  TouchArea,NowArea; 
+ 795   1        static unsigned char OverHighCh;
+ 796   1        
+ 797   1        int  Delta,MaxDelta;  
+ 798   1      #if PRINT_TS_KEY_DATA_EN
+                Uart0_PutChar(0xaa);
+              #endif
+ 801   1        
+ 802   1        MaxDelta = 0;
+ 803   1        for(i = 0; i < KEY_CH_COUNT; i++)
+ 804   1        {
+ 805   2          Delta   = (int)TS_BaseLineData[i] - (int)TS_PostData[i];
+ 806   2          
+ 807   2      #if PRINT_TS_KEY_DATA_EN
+                  if((i==PRINT_CH)||(PRINT_CH==0xFF))
+                  {
+                    Uart0_PutChar(i);
+                    Uart0_PutChar(TS_PostData[i]>>8);
+                    Uart0_PutChar(TS_PostData[i]);      
+                    Uart0_PutChar(TS_BaseLineData[i]>>8);
+                    Uart0_PutChar(TS_BaseLineData[i]);  
+                    if(Delta < 0)
+                    {
+                      Uart0_PutChar(0);
+                      Uart0_PutChar(0);
+                    }
+                    else
+                    {
+                      Uart0_PutChar(Delta>>8);  
+                      Uart0_PutChar(Delta);         
+                    }
+                  }
+              #endif
+ 827   2          if(!OverHighFlag)
+ 828   2          {
+ 829   3            if(Delta > (int)TS_CH_INFO_SEQ[i][1]*2)
+ 830   3            {
+ 831   4              if(Delta > MaxDelta)
+ 832   4              {
+ 833   5                MaxDelta = Delta;
+ 834   5                OverHighCh = i;
+ 835   5                OverHighFlag = 1; 
+ 836   5              }
+ 837   4            }   
+ 838   3          }
+ 839   2          else
+ 840   2          {
+ 841   3            if(i!=OverHighCh) continue;
+ 842   3            if(Delta < (TS_CH_INFO_SEQ[i][1]*(FINGER_TOUCH_THRESHOLD_RATE-10))/100)
+ 843   3            {
+ 844   4              OverHighFlag = 0;
+ 845   4            } 
+ 846   3          }
+ 847   2        }       
+ 848   1      
+ 849   1        for(i = 0; i < KEY_CH_COUNT; i++)
+ 850   1        {               
+ 851   2          if((i != OverHighCh) && OverHighFlag)
+ 852   2          {
+ 853   3            if(KeysFlagSN & MASK_TAB[i])
+ 854   3            {
+ 855   4              KeysFlagSN &= ~MASK_TAB[i];       
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 15  
+
+ 856   4            }
+ 857   3            TS_FirstAreaData[i] = TS_BaseLineData[i];
+ 858   3            TS_AreaConfirmTimerSet(i,AREA_PNOISE);    
+ 859   3            continue;
+ 860   3          }
+ 861   2          TouchArea = TS_GetDataArea(i,TS_FirstAreaData[i]);
+ 862   2          NowArea   = TS_GetDataArea(i,TS_PostData[i]);
+ 863   2      
+ 864   2      #if (SUPPORT_STOP_MODE_AUTO_SCAN || SUPPORT_STOP_MODE_MANUAL_SCAN)
+                  if((NowArea != AREA_PNOISE)&&(NowArea != AREA_NNOISE))
+                  {
+                    EnterStopScanTimer = ENTER_STOP_MODE_TIME;
+                  }
+              #endif
+ 870   2          
+ 871   2          if(TouchArea == AREA_FINGER_TOUCH)
+ 872   2          {
+ 873   3            if(NowArea == AREA_FINGER_TOUCH)
+ 874   3            {
+ 875   4              if(!(KeysFlagSN & MASK_TAB[i]))
+ 876   4              {
+ 877   5                if(!TS_AreaConfirmTimer[i])
+ 878   5                {   
+ 879   6                  KeysFlagSN |= MASK_TAB[i];    
+ 880   6      #if (FINGER_LONG_TOUCH_TIME_LIMIT > 0)
+ 881   6                  TSKey_LongTouchLimitTimer[i] = FINGER_LONG_TOUCH_TIME_LIMIT;
+ 882   6      #endif
+ 883   6                  TS_AreaConfirmTimer[i] = FINGER_TOUCH_RELEASE_CONFIRM_TIME; 
+ 884   6                }
+ 885   5              }
+ 886   4              else
+ 887   4              {
+ 888   5                TS_AreaConfirmTimer[i] = FINGER_TOUCH_RELEASE_CONFIRM_TIME;
+ 889   5      #if (FINGER_LONG_TOUCH_TIME_LIMIT > 0)
+ 890   5                if(!TSKey_LongTouchLimitTimer[i])
+ 891   5                {
+ 892   6                  KeysFlagSN &= ~MASK_TAB[i];
+ 893   6                  TS_FirstAreaData[i] = TS_PostData[i];
+ 894   6                  TS_BaseLineData[i]  = TS_PostData[i];
+ 895   6                  TS_AreaConfirmTimerSet(i,AREA_PNOISE);      
+ 896   6                }           
+ 897   5      #endif
+ 898   5              }       
+ 899   4            }
+ 900   3            else
+ 901   3            {
+ 902   4              if(KeysFlagSN & MASK_TAB[i]) 
+ 903   4              {
+ 904   5                if(!TS_AreaConfirmTimer[i])
+ 905   5                {
+ 906   6                  KeysFlagSN &= ~MASK_TAB[i];
+ 907   6                  TS_FirstAreaData[i] = TS_PostData[i];
+ 908   6                  TS_AreaConfirmTimerSet(i,NowArea);
+ 909   6                }         
+ 910   5              }     
+ 911   4              else
+ 912   4              {
+ 913   5                TS_FirstAreaData[i] = TS_PostData[i];
+ 914   5                TS_AreaConfirmTimerSet(i,NowArea);
+ 915   5              } 
+ 916   4            } 
+ 917   3            continue;           
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 16  
+
+ 918   3          } 
+ 919   2          else
+ 920   2          {
+ 921   3            if(NowArea == AREA_FINGER_TOUCH)
+ 922   3            {
+ 923   4              TS_FirstAreaData[i] = TS_PostData[i];
+ 924   4              TS_AreaConfirmTimerSet(i,AREA_FINGER_TOUCH);
+ 925   4              continue;   
+ 926   4            } 
+ 927   3          }
+ 928   2                
+ 929   2          if(TS_AreaDeviateDetection(i,TS_FirstAreaData[i],TS_PostData[i],TouchArea))    //ÅÐ¶ÏÆ«²îÊÇ·ñÔÚÔÊÐí·¶Î§Ä
+             -Ú
+ 930   2          { 
+ 931   3            if(!TS_AreaConfirmTimer[i])
+ 932   3            {
+ 933   4              TS_FirstAreaData[i] = TS_PostData[i];
+ 934   4              TS_BaseLineData[i]  = TS_PostData[i];
+ 935   4              TS_AreaConfirmTimerSet(i,AREA_PNOISE);        
+ 936   4            }   
+ 937   3          }
+ 938   2          else
+ 939   2          {
+ 940   3            TS_FirstAreaData[i] = TS_PostData[i]; 
+ 941   3            TS_AreaConfirmTimerSet(i,NowArea);        
+ 942   3          }
+ 943   2        }   
+ 944   1      }
+ 945          #endif
+ 946          #if SUPPORT_WHEEL_SLIDER
+              void TSWheelSliderGetTouchToggleInfo(unsigned char num)
+              {
+                unsigned char i;
+                unsigned int  Rate;
+                unsigned int  RateMin,RateSec;
+                int  Delta;
+              
+                RateMin = 0xFFFF;       
+                RateSec = 0xFFFF;
+                for(i = 0; i < SLIDER_CH_COUNT[num]; i++) 
+                {
+                  Delta   = (int)TS_BaseLineData[TS_BaseCh + i] - (int)TS_PostData[TS_BaseCh + i];  
+                  if(Delta <= 0) Delta = 1;
+                  Rate = TS_BaseLineData[TS_BaseCh + i]/Delta;  //»ù×¼ÖµÓë²îÖµµÄ±ÈÂÊ
+                        
+                  if(Rate < RateMin)  //²éÕÒ»ù×¼ÖµÓë²îÖµµÄ±ÈÂÊ×îÐ¡µÄ´¥ÃþÍ¨µÀ
+                  {
+                    RateSec = RateMin; 
+                    RateMin = Rate;
+                    Toggleinfo.SecMinChIdx = Toggleinfo.MinChIdx; 
+                    
+                    Toggleinfo.Delta2 = Toggleinfo.Delta1;  
+                    Toggleinfo.Delta1 = Delta;  //¼ÇÂ¼±ÈÂÊ×îÐ¡Í¨µÀµÄDelta
+                    Toggleinfo.MinChIdx = i;    //¼ÇÂ¼±ÈÂÊ×îÐ¡Í¨µÀµÄË÷ÒýÖµ
+                  }
+                  else if(Rate < RateSec)//²éÕÒ»ù×¼ÖµÓë²îÖµµÄ±ÈÂÊ´ÎÐ¡µÄ´¥ÃþÍ¨µÀ
+                  {
+                    RateSec = Rate;
+                    Toggleinfo.SecMinChIdx = i; //¼ÇÂ¼±ÈÂÊ´ÎÐ¡Í¨µÀµÄË÷ÒýÖµ
+                    Toggleinfo.Delta2 = Delta;  //¼ÇÂ¼±ÈÂÊ´ÎÐ¡Í¨µÀµÄDelta
+                  }
+                }
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 17  
+
+              }
+              
+              
+              unsigned char IsValidCh(unsigned char minchidx,unsigned char secchidx,unsigned char ch_size)
+              {
+                unsigned char Temp;
+                if(minchidx > secchidx) 
+                {
+                  Temp = secchidx;
+                }
+                else
+                {
+                  Temp = minchidx;
+                }
+                if(Temp != (minchidx+secchidx)/2)
+                {
+                  if((minchidx*secchidx != 0) && (minchidx + secchidx+1) != ch_size)
+                  {
+                    return 0;
+                  }
+                }
+                return 1;
+              }
+              
+              void TSWheelSliderTogChDataCal(void)
+              {
+                unsigned long int CalcTemp1,CalcTemp2;
+                unsigned int Temp;
+                unsigned char minidx,secidx;
+                
+                minidx = Toggleinfo.MinChIdx + TS_BaseCh;
+                secidx = Toggleinfo.SecMinChIdx + TS_BaseCh;
+                
+                CalcTemp1 = (unsigned long int)(TS_BaseLineData[minidx]) * (unsigned long int)(TS_BaseLineData[secidx]);
+                CalcTemp2 = CalcTemp1;
+                CalcTemp1 >>= 6;
+              
+                CalcTemp1 *= (unsigned long int)TS_PostData[secidx];
+                  
+                CalcTemp2 += ((unsigned long int)TS_BaseLineData[secidx] - (unsigned long int)TS_BaseLineData[minidx]) * 
+             -(unsigned long int)TS_PostData[secidx];
+                CalcTemp2 >>= 6;
+                Toggleinfo.Delta2 = TS_BaseLineData[minidx] - (unsigned int)(CalcTemp1/CalcTemp2);  
+              
+                if(Toggleinfo.Delta2 > Toggleinfo.Delta1)
+                {
+                  Temp = Toggleinfo.Delta2;
+                  Toggleinfo.Delta2 = Toggleinfo.Delta1;
+                  Toggleinfo.Delta1 = Temp;
+                  Temp = (unsigned int)Toggleinfo.SecMinChIdx;
+                  Toggleinfo.SecMinChIdx = Toggleinfo.MinChIdx;
+                  Toggleinfo.MinChIdx = (unsigned char)Temp;
+                }
+              }
+              
+              unsigned char RateFilter(unsigned char rate,unsigned int *filterBuf,unsigned char touchFlag)
+              {
+                if(!touchFlag)
+                {
+                  *filterBuf = rate*4;
+                }
+                else
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 18  
+
+                {
+                  *filterBuf = *filterBuf - *filterBuf/4 + rate;
+                }
+                return (*filterBuf/4);  
+              }
+              unsigned int DeltaRateSumFilter(unsigned int rate,unsigned int *filterBuf,unsigned char touchFlag)
+              {
+                if(!touchFlag)
+                {
+                  *filterBuf = rate*5;
+                }
+                else
+                {
+                  *filterBuf = *filterBuf - *filterBuf/5 + rate;
+                }
+                return (*filterBuf/5);    
+              }
+              unsigned char WheelGetOffsetDirection(unsigned char minidx,unsigned char secidx)
+              {
+                
+                if(minidx > secidx)
+                {
+                  if(minidx != secidx+1)
+                  {
+                    return 1;
+                  }
+                  else
+                  {
+                    return 0;
+                  }
+                }
+                else
+                {
+                  if(secidx != minidx+1)
+                  {
+                    return 0;
+                  }
+                  else
+                  {
+                    return 1;
+                  }
+                }
+              }
+              int WheelSliderPositionCorrection(int position, int factor)
+              {
+                position += factor;
+                if(position > 255)
+                {
+                  position -= 256;
+                }
+                else if(position < 0)
+                {
+                  position += 256;
+                }
+                return position;
+              }
+              
+              unsigned char WheelSliderTouchJudge(unsigned char num)
+              {
+                unsigned int  DeltaRateSum,Rate;
+              
+                unsigned int  gpTemp;
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 19  
+
+                unsigned int  Offset;
+                unsigned char *pRateMax;
+                static unsigned int xdata FilterBuf[WHEEL_SLIDER_COUNT];
+                static unsigned int xdata DeltaRateSumFilerBuf[WHEEL_SLIDER_COUNT];
+                
+                WheelSliderValidTouchFlag = 0;  
+                pRateMax = WHEEL_SLIDER_MAX_RATE[num];
+                
+                TSWheelSliderGetTouchToggleInfo(num);
+              
+              
+                DeltaRateSum = (unsigned int)(((unsigned long int)Toggleinfo.Delta1*10000)/(TS_CH_INFO_SEQ[TS_BaseCh+Togg
+             -leinfo.MinChIdx][1]*FINGER_TOUCH_THRESHOLD_RATE) 
+                + ((unsigned long int)Toggleinfo.Delta2*10000)/(TS_CH_INFO_SEQ[TS_BaseCh+Toggleinfo.SecMinChIdx][1]*FINGE
+             -R_TOUCH_THRESHOLD_RATE));
+                
+                if(DeltaRateSum < 100) //±ÈÂÊ×îÐ¡ºÍ´ÎÐ¡µÄÍ¨µÀµÄDeltaÖµºÍ¸÷×ÔÃÅÏÞÖµ°Ù·Ö±ÈÖ®ºÍ´óÓÚ100±íÊ¾ÓÐ´¥ÃþÊÂ¼þ
+                {   
+                  return 0;
+                }
+              /*********************************************************************************************************
+             -*/
+              //ÅÐ¶Ï´ËÁ½Í¨µÀÊÇ·ñÎªÏàÁÚÍ¨µÀ
+                if(!IsValidCh(Toggleinfo.MinChIdx,Toggleinfo.SecMinChIdx,SLIDER_CH_COUNT[num]))
+                {
+                  return 0;
+                }
+              /*********************************************************************************************************
+             -*/  
+              
+                //Êý¾ÝÐ£Õý
+                TSWheelSliderTogChDataCal();
+              
+                Rate = (Toggleinfo.Delta1*100)/(Toggleinfo.Delta1+Toggleinfo.Delta2); //¼ÆËãDelta1Õ¼±È
+              
+                Rate = RateFilter(Rate,&FilterBuf[num],WheelSliderTouchFlag[num]);  //rateÂË²¨£¬Ïû³ý¶¶¶¯
+              
+              
+                gpTemp = DeltaRateSumFilter(DeltaRateSum,&DeltaRateSumFilerBuf[num],WheelSliderTouchFlag[num]);
+                
+                
+                if(DeltaRateSum >= (gpTemp*3)/4)
+                {
+                  WheelSliderValidTouchFlag = 1;    
+                }
+                
+                WheelSliderPositionTemp = Toggleinfo.MinChIdx*(256/SLIDER_CH_COUNT[num])+(128/SLIDER_CH_COUNT[num]);
+              
+                if(Rate >= pRateMax[Toggleinfo.MinChIdx])
+                {
+                  Offset = 0;
+                }
+                else
+                {
+                  Offset = ((pRateMax[Toggleinfo.MinChIdx] - Rate)*(128/SLIDER_CH_COUNT[num]))/(pRateMax[Toggleinfo.MinChI
+             -dx]-50);
+                }
+              #if PRINT_WHEEL_SLIDER_MAX_RATE_EN
+                if(num == PRINT_WHEEL_SLIDER_NUM)
+                {
+              
+                  Uart0_PutChar(Toggleinfo.MinChIdx + 0x30);  
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 20  
+
+                  Uart0_PutChar(' ');
+                  
+                  Uart0_PutChar(Rate/100+0x30);   
+                  Uart0_PutChar((Rate%100)/10+0x30);    
+                  Uart0_PutChar((Rate%10)+0x30);  
+                  Uart0_PutChar('\r');  
+                  Uart0_PutChar('\n');  
+                } 
+              #endif
+                if(WheelGetOffsetDirection(Toggleinfo.MinChIdx,Toggleinfo.SecMinChIdx))
+                {
+                  WheelSliderPositionTemp += Offset;
+                }
+                else
+                {
+                  WheelSliderPositionTemp -= Offset;
+                }
+                
+                WheelSliderPositionTemp = WheelSliderPositionCorrection(WheelSliderPositionTemp,POSITION_CORRECTION_FACTO
+             -R[num]);
+                if(WheelSliderPositionTemp > 255) WheelSliderPositionTemp = 255;
+              
+                return 1;
+              
+              }
+              void TS_WheelSliderDeal(void)
+              {
+                unsigned char num,i;
+                unsigned char  TouchArea,NowArea;
+                int   Delta;
+                
+                TS_BaseCh = KEY_CH_COUNT; 
+                for(num = 0; num < WHEEL_SLIDER_COUNT; num++)
+                {
+              #if PRINT_WHEEL_SLIDER_DATA_EN
+                  if(num == PRINT_WHEEL_SLIDER_NUM)
+                  {
+                    Uart0_PutChar(0xaa);
+                    for(i = TS_BaseCh; i < TS_BaseCh + SLIDER_CH_COUNT[num]; i++)
+                    {           
+                      Delta   = (int)TS_BaseLineData[i] - (int)TS_PostData[i];      
+                      Uart0_PutChar(i);
+                      Uart0_PutChar(TS_PostData[i]>>8);
+                      Uart0_PutChar(TS_PostData[i]);      
+                      Uart0_PutChar(TS_BaseLineData[i]>>8);
+                      Uart0_PutChar(TS_BaseLineData[i]);  
+                      if(Delta < 0)
+                      {
+                        Uart0_PutChar(0);
+                        Uart0_PutChar(0);
+                      }
+                      else
+                      {
+                        Uart0_PutChar(Delta>>8);  
+                        Uart0_PutChar(Delta);         
+                      }         
+                    }       
+                  }
+              #endif
+                  if(WheelSliderState[num] == WHEEL_SLIDER_NO_TOUCH)
+                  {
+                    if(!WheelSliderTouchFlag[num])
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 21  
+
+                    {
+                      if(WheelSliderTouchJudge(num))
+                      {
+                        WheelSliderTouchFlag[num] = 1;  
+                        TSWheelSlider_TouchConfirmTimer[num] = WHEEL_SLIDER_TOUCH_CONFIRM_TIME;       
+                      }
+                      else
+                      {
+                        for(i = TS_BaseCh; i < TS_BaseCh + SLIDER_CH_COUNT[num]; i++)
+                        {           
+                          Delta   = (int)TS_BaseLineData[i] - (int)TS_PostData[i];
+                          TouchArea = TS_GetDataArea(i,TS_FirstAreaData[i]);
+                          NowArea   = TS_GetDataArea(i,TS_PostData[i]);
+                          
+                          if(TS_AreaDeviateDetection(i,TS_FirstAreaData[i],TS_PostData[i],TouchArea))    //ÅÐ¶ÏÆ«²îÊÇ·ñÔÚÔÊÐí·
+             -¶Î§ÄÚ
+                          {
+                            if(!TS_AreaConfirmTimer[i])
+                            {
+                              TS_FirstAreaData[i] = TS_PostData[i];
+                              TS_BaseLineData[i]  = TS_PostData[i];
+                              TS_AreaConfirmTimerSet(i,AREA_PNOISE);  
+                            }   
+                          }
+                          else
+                          {
+                            TS_FirstAreaData[i] = TS_PostData[i];
+                            TS_AreaConfirmTimerSet(i,AREA_PNOISE);  
+                          }
+                        }
+                      }     
+                    } 
+                    else
+                    { 
+                      if(WheelSliderTouchJudge(num))  
+                      {
+                        if(!TSWheelSlider_TouchConfirmTimer[num])
+                        {
+                          WheelSliderState[num] = WHEEL_SLIDER_TOUCH; 
+              #if (WHEEL_SLIDER_LONG_TOUCH_TIME_LIMIT > 0)
+                          TSWheelSlider_LongTouchLimitTimer[num] = WHEEL_SLIDER_LONG_TOUCH_TIME_LIMIT;
+              #endif
+                        } 
+                      }
+                      else
+                      {
+                        WheelSliderTouchFlag[num] = 0;
+                        for(i = TS_BaseCh; i < TS_BaseCh + SLIDER_CH_COUNT[num]; i++)
+                        {
+                          TS_AreaConfirmTimerSet(i,AREA_PNOISE);  
+                        }
+                      }
+                    }       
+                  }
+                  else if(WheelSliderState[num] == WHEEL_SLIDER_TOUCH)
+                  {   
+              #if (WHEEL_SLIDER_LONG_TOUCH_TIME_LIMIT > 0)
+                    if(!TSWheelSlider_LongTouchLimitTimer[num])
+                    {
+                      for(i = TS_BaseCh; i < TS_BaseCh + SLIDER_CH_COUNT[num]; i++)
+                      {
+                        TS_FirstAreaData[i] = TS_PostData[i];
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 22  
+
+                        TS_BaseLineData[i]  = TS_PostData[i];
+                      }
+                      WheelSliderTouchFlag[num] = 0;
+                      goto WHEEL_SLIDER_RELEASE;
+                    }
+              #endif
+                    if(WheelSliderTouchFlag[num])
+                    {
+                      if(!WheelSliderTouchJudge(num)) 
+                      {
+                        WheelSliderTouchFlag[num] = 0;
+                        TSWheelSlider_TouchConfirmTimer[num] = WHEEL_SLIDER_TOUCH_RELEASE_CONFIRM_TIME;   
+                      }
+                    }
+                    else             
+                    {
+                      if(!WheelSliderTouchJudge(num)) 
+                      {
+                        if(!TSWheelSlider_TouchConfirmTimer[num])
+                        {
+              WHEEL_SLIDER_RELEASE:
+                          WheelSliderState[num] = WHEEL_SLIDER_NO_TOUCH;  
+                          WheelSliderPosition[num] = -1;
+                          for(i = TS_BaseCh; i < TS_BaseCh + SLIDER_CH_COUNT[num]; i++)
+                          {
+                            TS_AreaConfirmTimerSet(i,AREA_PNOISE);  
+                          }
+                        }
+                      }
+                      else
+                      {
+                        WheelSliderTouchFlag[num] = 1;        
+                      }
+                    }   
+                  }   
+                  if(WheelSliderState[num] == WHEEL_SLIDER_TOUCH)
+                  {
+                    if(WheelSliderValidTouchFlag)
+                    {
+                      WheelSliderPosition[num] = WheelSliderPositionTemp;   
+              #if PRINT_WHEEL_SLIDER_POSITION_EN
+                      Uart0_PutChar(num + 0x30);  
+                      Uart0_PutChar(' ');
+                      
+                      Uart0_PutChar(WheelSliderPosition[num]/100+0x30);   
+                      Uart0_PutChar((WheelSliderPosition[num]%100)/10+0x30);    
+                      Uart0_PutChar((WheelSliderPosition[num]%10)+0x30);  
+              
+                      Uart0_PutChar('\r');  
+                      Uart0_PutChar('\n');  
+              #endif
+                    }
+                  }
+              #if (SUPPORT_STOP_MODE_AUTO_SCAN || SUPPORT_STOP_MODE_MANUAL_SCAN)
+                  if(WheelSliderTouchFlag[num])
+                  {
+                    EnterStopScanTimer = ENTER_STOP_MODE_TIME;
+                  }
+              #endif
+                  TS_BaseCh += SLIDER_CH_COUNT[num];
+                }
+              }
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 23  
+
+              #endif
+1344          #if SUPPORT_WATER_DETECT
+              void TS_WaterDetectDeal(void)
+              {
+                unsigned char CapRate;
+                TS_BaseCh = OPENED_TS_COUNT-2;
+                CapRate = (unsigned char)(((unsigned long int)TS_PostData[TS_BaseCh+1]*100)/(unsigned long int)TS_PostDat
+             -a[TS_BaseCh]);
+              
+                if(WaterDetCapRateFilterCnt < WATER_DET_FILTER_CNT)
+                {
+                  WaterDetCapRateFilterCnt++;
+                  WaterDetCapRateFilterBuf += CapRate;
+                }
+                else
+                {
+                  WaterDetCapRateFilterBuf -= WaterDetCapRateFilterBuf/WATER_DET_FILTER_CNT;
+                  WaterDetCapRateFilterBuf += CapRate;
+                  
+                  CapRate = (unsigned char)(WaterDetCapRateFilterBuf/WATER_DET_FILTER_CNT);
+              #if  PRINT_WATER_DET_CAP_RATE_EN
+                  Uart0_PutChar(CapRate/100+0x30);    
+                  Uart0_PutChar((CapRate%100)/10+0x30);   
+                  Uart0_PutChar((CapRate%10)+0x30); 
+                  Uart0_PutChar('\r');  
+                  Uart0_PutChar('\n');      
+              #endif
+                  if(!WaterFlag)
+                  {
+                    if(CapRate < WATER_RATE_THD)
+                    {
+                      WaterFlag = 1;
+                    }
+                  }
+                  else
+                  {
+                    if(CapRate > NO_WATER_RATE_THD)
+                    {
+                      WaterFlag = 0;
+                    }
+                  }
+                }
+                
+              }
+              #endif  
+1387          #if ANTI_SPEAKPHONE
+              void TS_RawDataCalibrate(unsigned int data1, unsigned int data2)
+              {
+                unsigned char i;
+              
+                for(i = 0; i < OPENED_TS_COUNT; i++)
+                {
+                  TS_RawData[i] = ((unsigned long int)TS_RawData[i]*(unsigned long int)data2)/data1;      
+                } 
+              }
+              void TS_CheckRefCh(void)
+              {
+                int  Delta;
+                unsigned int TS_RefPostData;
+                TS_RefFilterPosIdx++;
+                if(TS_RefFilterPosIdx >= FILTER_COUNT) 
+                {
+C51 COMPILER V9.52.0.0   TS_SEVICE                                                         07/24/2018 11:06:15 PAGE 24  
+
+                  TS_RefFilterPosIdx = 0;
+                }
+                TS_RefFilterBuf[TS_RefFilterPosIdx] = TS_RefChRawData;
+                TS_RefPostData = GetMidVal(TS_RefFilterBuf);  
+                
+                if(!TS_RefCHBaseLineAdjuTimer)
+                {
+                  TS_RefCHBaseLineAdjuTimer = 2;
+                  Delta = (int)TS_RefPostData - (int)TS_RefChBaseLineData;
+              
+                  if(Delta > 0)
+                  {
+                    TS_RefChBaseLineData++; 
+                  }
+                  else if(Delta < 0)
+                  {
+                    TS_RefChBaseLineData--; 
+                  }       
+                }
+                TS_RawDataCalibrate(TS_RefPostData,TS_RefChBaseLineData);
+              }
+              #endif
+1426          /*********************************************************************************************************
+             -************/
+1427          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2666    ----
+   CONSTANT SIZE    =    160    ----
+   XDATA SIZE       =     44      36
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =      2      10
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

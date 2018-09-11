@@ -1,0 +1,1 @@
+"User\adc_key.c" LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\adc_key.lst) TABS (2) OBJECT(.\Output\adc_key.obj)

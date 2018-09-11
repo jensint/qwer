@@ -1,0 +1,97 @@
+C51 COMPILER V9.51   RTC                                                                   06/28/2017 11:43:53 PAGE 1   
+
+
+C51 COMPILER V9.51, COMPILATION OF MODULE RTC
+OBJECT MODULE PLACED IN .\hex\rtc.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\..\Library\Sources\rtc.c ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\
+                    -lst\rtc.lst) TABS(2) OBJECT(.\hex\rtc.obj)
+
+line level    source
+
+   1          #ifndef _RTC_C_
+   2          #define _RTC_C_
+   3          /*********************************************************************************************************
+             -************/
+   4          #include "ca51f_config.h"
+   5          #if (IC_TYPE == IC_TYPE_CA51F2X)
+   6          #include "../../includes/ca51f2sfr.h"
+   7          #include "../../includes/ca51f2xsfr.h"
+   8          #include "../../includes/gpiodef_f2.h"
+   9          #elif (IC_TYPE == IC_TYPE_CA51F3X)
+              #include "../../includes/ca51f3sfr.h"
+              #include "../../includes/ca51f3xsfr.h"
+              #include "../../includes/gpiodef_f3.h"
+              #endif
+  14          #include "../../includes/system.h"
+  15          #include "../../Library/includes/rtc.h"
+  16          #include "../../Library/includes/delay.h"
+  17          #include <intrins.h>
+  18          /*********************************************************************************************************
+             -************/
+  19                                                                  
+  20          void RTC_init(RTCE_TypeDef rtce,MSE_TypeDef mse,HSE_TypeDef hse)
+  21          { 
+  22   1        RTCON = (RTCON & 0x1F) | RTCE(rtce) | MSE(mse) | HSE(hse);
+  23   1      }
+  24          void RTC_WriteSecond(unsigned char second) //second = 0~59
+  25          {
+  26   1        RTCON |= RTCWE(1);
+  27   1        RTCS = second;
+  28   1        Delay_50us(1);
+  29   1        RTCON &= ~RTCWE(1);   
+  30   1      }
+  31          void RTC_WriteMinute(unsigned char minute) //minute = 0~59
+  32          {
+  33   1        RTCON |= RTCWE(1);
+  34   1        RTCM = minute;
+  35   1        Delay_50us(1);
+  36   1        RTCON &= ~RTCWE(1);
+  37   1      }
+  38          void RTC_WriteHour(unsigned char hour)  //hour = 0~23
+  39          {
+  40   1        RTCON |= RTCWE(1);
+  41   1        RTCH = (RTCH&0xE0)|hour;
+  42   1        Delay_50us(1);
+  43   1        RTCON &= ~RTCWE(1);   
+  44   1      }
+  45          void RTC_WriteWeek(unsigned char week) //hour = 1~7代表星期一~星期天
+  46          {
+  47   1        RTCON |= RTCWE(1);
+  48   1        RTCH = (RTCH&0x1F)|(week<<5);
+  49   1        Delay_50us(1);
+  50   1        RTCON &= ~RTCWE(1);   
+  51   1      }
+  52          void RTC_AlarmCfg(HCE_TypeDef hce,MCE_TypeDef mce,SCE_TypeDef sce)
+C51 COMPILER V9.51   RTC                                                                   06/28/2017 11:43:53 PAGE 2   
+
+  53          { 
+  54   1        RTCON = (RTCON & 0xE3) | HCE(hce) | MCE(mce) | SCE(sce);
+  55   1      }
+  56          void RTC_SetAlaramTime(unsigned char al_hr,unsigned char al_min,unsigned char al_sec)
+  57          {
+  58   1        RTAH  = al_hr;
+  59   1        RTAM  = al_min;
+  60   1        RTAS  = al_sec;
+  61   1      }
+  62          void RTC_SetRTMSS(unsigned char rtmss)
+  63          {
+  64   1        RTMSS = rtmss;
+  65   1      }
+  66          
+  67          /*********************************************************************************************************
+             -************/
+  68          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    149    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

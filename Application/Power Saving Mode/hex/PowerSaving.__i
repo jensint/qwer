@@ -1,0 +1,1 @@
+"PowerSaving.c" ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\PowerSaving.lst) TABS (2) OBJECT(.\hex\PowerSaving.obj)

@@ -1,0 +1,351 @@
+C51 COMPILER V9.52.0.0   KEY                                                               07/24/2018 11:06:15 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE KEY
+OBJECT MODULE PLACED IN .\Output\key.obj
+COMPILER INVOKED BY: E:\Keil\C51\BIN\C51.EXE TS_Lib\Sources\key.c LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\L
+                    -ibrary\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\key.lst) TABS(2) OBJECT(.\Output\key.obj)
+
+line level    source
+
+   1          #ifndef _KEY_C_
+   2          #define _KEY_C_
+   3          
+   4          /*********************************************************************************************************
+             -************/
+   5          #include "ca51f_config.h"
+   6          #if (IC_TYPE == IC_TYPE_CA51F2X)
+              #include "ca51f2sfr.h"
+              #include "ca51f2xsfr.h"
+              #include "gpiodef_f2.h"
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+  11          #include "ca51f3sfr.h"
+  12          #include "ca51f3xsfr.h"
+  13          #include "gpiodef_f3.h"
+  14          #endif
+  15          #include "rtc.h"    
+  16          #include "system_clock.h"   
+  17          #include "uart.h"
+  18          #include "key.h"
+  19          /*********************************************************************************************************
+             -************/
+  20          #include "ts_configuration.h"
+  21          #include "ts_def.h"
+  22          #include "ts_api.h"
+  23          #include "ts_service.h"      
+  24          /*********************************************************************************************************
+             -************/
+  25          #if SUPPORT_KEY
+  26          /*************************************************************************************************
+  27          单键：
+  28          以K1为例，K1按键产生的流程如下所示：
+  29          
+  30                      --> K1|KEY_BREAK(短按松开)
+  31                    -
+  32          K1(按下)--
+  33                    -
+  34                      --> K1|KEY_LONG_START(长按大约1秒)---> K1|KEY_LONG(一直长按，约每300ms产生长按键)---->K1|KEY_LONG_BR
+             -EAK(长按松开)
+  35                                                         ^                                               |
+  36                                                         |                                               |
+  37                                                         |-----------------------------------------------|
+  38          
+  39          复合键：
+  40          以K1(K1=0x0001),K2(K2=0x0002)为例， 当K1，K2同时按下时，产生按键为(K1<<5)|K2，即0x22, 产生按键的流程如下所
+             -示：
+  41          
+  42          
+  43                              --> ((K1<<5)|K2)|KEY_BREAK(短按松开)
+  44                            -
+  45          (K1<<5)|K2(按下)--
+  46                            -
+  47                              --> ((K1<<5)|K2)|KEY_LONG_START(长按大约1秒)---> ((K1<<5)|K2)|KEY_LONG(一直长按，约每300ms产生长
+             -按键)---->((K1<<5)|K2)|KEY_LONG_BREAK(长按松开)
+  48                                                                           ^                                                         |
+C51 COMPILER V9.52.0.0   KEY                                                               07/24/2018 11:06:15 PAGE 2   
+
+  49                                                                           |                                                         |
+  50                                                                           |---------------------------------------------------------|
+  51          注意：由于复合键按下时，软件不一定同时检测到双键，而是先检测到单键按下，例如先检测到K1，此时会先产生K1键，
+             -等到检测到K2也按
+  52          下时，才会产生按键(K1<<5)|K2，检测到双键后，如果双键一直按下，会产生((K1<<5)|K2)|KEY_LONG_START和((K1<<5)|
+             -K2)|KEY_LONG，如果
+  53          有一个键先松手，会停止产生按键， 等到双键都松开时，才会产生((K1<<5)|K2)|KEY_BREAK(短按松开)或((K1<<5)|K2)|
+             -KEY_LONG_BREAK(长按松开)
+  54          *************************************************************************************************/
+  55          typedef struct 
+  56          { 
+  57            unsigned char   TogKeyNum;
+  58            unsigned char   TogKeyList[2];
+  59          }
+  60          T_TogKeyInfo;
+  61          code unsigned char TS_KEY_TAB[]=
+  62          {
+  63            K1,K2,K3,K4,K5,K6,K7,K8,K9,K10,K11,K12,K13,K14,K15,K16,K17,K18,K19,K20,
+  64          #if (IC_TYPE == IC_TYPE_CA51F2X)
+                K21,K22,K23,K24
+              #endif
+  67          };
+  68          void TSKey_init(void)
+  69          {
+  70   1        TK_State = TK_STATE_RELEASE;
+  71   1        TS_Key = 0;
+  72   1      }
+  73          void TS_GetTogKeyInfor(T_TogKeyInfo *pKeyInfo)
+  74          {
+  75   1        unsigned char i,index;
+  76   1        pKeyInfo->TogKeyNum = 0;
+  77   1        index = 0;
+  78   1        for(i = 0; i < KEY_CH_COUNT; i++)
+  79   1        {
+  80   2          if(KeysFlagSN & MASK_TAB[i])
+  81   2          {
+  82   3            pKeyInfo->TogKeyNum++;
+  83   3            
+  84   3            if(pKeyInfo->TogKeyNum <= 2)
+  85   3            {
+  86   4              pKeyInfo->TogKeyList[index++] = TS_KEY_TAB[i];
+  87   4            }
+  88   3          }
+  89   2        }
+  90   1      }
+  91          #if PRINT_TS_KEY_EN
+              void Hex2CharPrint(unsigned int integar)
+              {
+                unsigned char CharBuf[4];
+                unsigned char i, temp;
+                for(i = 0; i < 4; i++)
+                {
+                  temp = (unsigned char)(integar&0x0F);
+                  if(temp >= 0x0A)
+                  {
+                    CharBuf[i] = (temp - 0x0A) + 'A';
+                  }
+                  else
+                  {
+                    CharBuf[i] = temp + '0';
+                  }
+                  integar >>= 4;
+C51 COMPILER V9.52.0.0   KEY                                                               07/24/2018 11:06:15 PAGE 3   
+
+                }
+                Uart0_PutChar('0'); 
+                Uart0_PutChar('x'); 
+                Uart0_PutChar(CharBuf[2]);
+                Uart0_PutChar(CharBuf[1]);
+                Uart0_PutChar(CharBuf[0]);
+              }
+              #endif
+ 116          void TS_GetKey(void)
+ 117          {
+ 118   1        static unsigned int KeyBak; 
+ 119   1        static bit LongFlag;
+ 120   1        T_TogKeyInfo KeyInfo;
+ 121   1        TS_Key = 0;
+ 122   1        TS_GetTogKeyInfor(&KeyInfo);
+ 123   1          
+ 124   1        if(TK_State == TK_STATE_RELEASE)
+ 125   1        {
+ 126   2          if(KeyInfo.TogKeyNum != 0)
+ 127   2          {     
+ 128   3            if(KeyInfo.TogKeyNum == 1)
+ 129   3            {
+ 130   4              KeyBak = (unsigned int)KeyInfo.TogKeyList[0];
+ 131   4              TK_State = TK_STATE_SINGLE_KEY_PRESS;       
+ 132   4            }
+ 133   3            else if(KeyInfo.TogKeyNum == 2)
+ 134   3            {
+ 135   4              KeyBak = ((unsigned int)KeyInfo.TogKeyList[0]<<5)|(unsigned int)KeyInfo.TogKeyList[1];
+ 136   4              TK_State = TK_STATE_DOUBLE_KEY_PRESS;
+ 137   4            }
+ 138   3            
+ 139   3            TS_Key = KeyBak;
+ 140   3            LongFlag = 0;
+ 141   3            TS_LongKeyTimer = TS_LONG_START_TIME;
+ 142   3          }
+ 143   2        }
+ 144   1        else if(TK_State == TK_STATE_SINGLE_KEY_PRESS)
+ 145   1        {
+ 146   2          if(KeyInfo.TogKeyNum == 1)
+ 147   2          {
+ 148   3            if(KeyBak == (unsigned int)KeyInfo.TogKeyList[0])
+ 149   3            {
+ 150   4              if(!TS_LongKeyTimer)
+ 151   4              {
+ 152   5                if(!LongFlag)
+ 153   5                {
+ 154   6                  LongFlag = 1;
+ 155   6                  TS_Key = KeyBak | KEY_LONG_START;
+ 156   6                }
+ 157   5                else
+ 158   5                {
+ 159   6                  TS_Key = KeyBak | KEY_LONG;
+ 160   6                }
+ 161   5                TS_LongKeyTimer = TS_LONG_TIME;
+ 162   5              }       
+ 163   4            }
+ 164   3            else 
+ 165   3            {
+ 166   4              if(!LongFlag)
+ 167   4              {
+ 168   5                TS_Key = KeyBak | KEY_BREAK;
+ 169   5              }
+C51 COMPILER V9.52.0.0   KEY                                                               07/24/2018 11:06:15 PAGE 4   
+
+ 170   4              else
+ 171   4              {
+ 172   5                TS_Key = KeyBak | KEY_LONG_BREAK;
+ 173   5              }
+ 174   4              TK_State = TK_STATE_RELEASE;  
+ 175   4            }
+ 176   3          }
+ 177   2          else if(KeyInfo.TogKeyNum == 2)
+ 178   2          {
+ 179   3            KeyBak = ((unsigned int)KeyInfo.TogKeyList[0]<<5) | (unsigned int)KeyInfo.TogKeyList[1];
+ 180   3            TK_State = TK_STATE_DOUBLE_KEY_PRESS;
+ 181   3            TS_Key = KeyBak;
+ 182   3            LongFlag = 0;
+ 183   3            TS_LongKeyTimer = TS_LONG_START_TIME;
+ 184   3          }
+ 185   2          else if(KeyInfo.TogKeyNum == 0)
+ 186   2          {
+ 187   3            if(!LongFlag)
+ 188   3            {
+ 189   4              TS_Key = KeyBak | KEY_BREAK;
+ 190   4            }
+ 191   3            else
+ 192   3            {
+ 193   4              TS_Key = KeyBak | KEY_LONG_BREAK;
+ 194   4            }
+ 195   3            TK_State = TK_STATE_RELEASE;        
+ 196   3          }
+ 197   2        }
+ 198   1        else if(TK_State == TK_STATE_DOUBLE_KEY_PRESS)
+ 199   1        {
+ 200   2          if(KeyInfo.TogKeyNum == 2)
+ 201   2          {
+ 202   3            if(KeyBak == ((unsigned int)KeyInfo.TogKeyList[0]<<5)|(unsigned int)KeyInfo.TogKeyList[1])
+ 203   3            {
+ 204   4              if(!TS_LongKeyTimer)
+ 205   4              {
+ 206   5                if(!LongFlag)
+ 207   5                {
+ 208   6                  LongFlag = 1;
+ 209   6                  TS_Key = KeyBak | KEY_LONG_START;
+ 210   6                }
+ 211   5                else
+ 212   5                {
+ 213   6                  TS_Key = KeyBak | KEY_LONG;
+ 214   6                }
+ 215   5                TS_LongKeyTimer = TS_LONG_TIME;
+ 216   5              }         
+ 217   4            }
+ 218   3          }
+ 219   2          else if(KeyInfo.TogKeyNum == 0)
+ 220   2          {
+ 221   3            if(!LongFlag)
+ 222   3            {
+ 223   4              TS_Key = KeyBak | KEY_BREAK;
+ 224   4            }
+ 225   3            else
+ 226   3            {
+ 227   4              TS_Key = KeyBak | KEY_LONG_BREAK;
+ 228   4            }
+ 229   3            TK_State = TK_STATE_RELEASE;        
+ 230   3          }
+ 231   2        }
+C51 COMPILER V9.52.0.0   KEY                                                               07/24/2018 11:06:15 PAGE 5   
+
+ 232   1      #if PRINT_TS_KEY_EN
+                if(TS_Key != 0)
+                {
+                  if((TS_Key & 0xFF00) == 0)
+                  {
+                    if(TS_Key > 0x1F)
+                    {
+                      Uart0_PutChar('d'); 
+                      Uart0_PutChar('o'); 
+                      Uart0_PutChar('u'); 
+                      Uart0_PutChar('b'); 
+                      Uart0_PutChar('l'); 
+                      Uart0_PutChar('e');     
+                    }
+                    else
+                    {
+                      Uart0_PutChar('s'); 
+                      Uart0_PutChar('i'); 
+                      Uart0_PutChar('n'); 
+                      Uart0_PutChar('g'); 
+                      Uart0_PutChar('l'); 
+                      Uart0_PutChar('e');   
+                    }
+                    Uart0_PutChar(' '); 
+                    Uart0_PutChar('k'); 
+                    Uart0_PutChar('e'); 
+                    Uart0_PutChar('y'); 
+                    Uart0_PutChar(' '); 
+                    Uart0_PutChar('='); 
+                    Uart0_PutChar(' '); 
+                    Hex2CharPrint(TS_Key);
+                    Uart0_PutChar('\r');  
+                    Uart0_PutChar('\n');  
+                  }
+                  else if(TS_Key & KEY_BREAK)
+                  {
+                    Uart0_PutChar('k'); 
+                    Uart0_PutChar('e'); 
+                    Uart0_PutChar('y'); 
+                    Uart0_PutChar(' '); 
+                    Uart0_PutChar('u'); 
+                    Uart0_PutChar('p'); 
+                    Uart0_PutChar('\r');  
+                    Uart0_PutChar('\n');        
+                  }
+                  else if(TS_Key & KEY_LONG_START)
+                  {
+                    Uart0_PutChar('l'); 
+                    Uart0_PutChar('o'); 
+                    Uart0_PutChar('n'); 
+                    Uart0_PutChar('g'); 
+                    Uart0_PutChar(' '); 
+                    Uart0_PutChar('s'); 
+                    Uart0_PutChar('t'); 
+                    Uart0_PutChar('a'); 
+                    Uart0_PutChar('r'); 
+                    Uart0_PutChar('t'); 
+                    Uart0_PutChar('\r');  
+                    Uart0_PutChar('\n');      
+                  }
+                  else if(TS_Key & KEY_LONG)
+                  {
+C51 COMPILER V9.52.0.0   KEY                                                               07/24/2018 11:06:15 PAGE 6   
+
+                    Uart0_PutChar('l'); 
+                    Uart0_PutChar('o'); 
+                    Uart0_PutChar('n'); 
+                    Uart0_PutChar('g'); 
+                    Uart0_PutChar('\r');  
+                    Uart0_PutChar('\n');      
+                  }
+                }
+              #endif
+ 303   1      }
+ 304          #endif
+ 305          
+ 306          /*********************************************************************************************************
+             -************/
+ 307          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    575    ----
+   CONSTANT SIZE    =     20    ----
+   XDATA SIZE       =      7       8
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

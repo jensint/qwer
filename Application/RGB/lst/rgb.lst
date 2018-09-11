@@ -1,0 +1,178 @@
+C51 COMPILER V9.51   RGB                                                                   07/13/2017 15:37:16 PAGE 1   
+
+
+C51 COMPILER V9.51, COMPILATION OF MODULE RGB
+OBJECT MODULE PLACED IN .\hex\rgb.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE rgb.c ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\rgb.lst) TABS(2) O
+                    -BJECT(.\hex\rgb.obj)
+
+line level    source
+
+   1          #ifndef _IRC_C_
+   2          #define _IRC_C_
+   3          
+   4          /*********************************************************************************************************
+             -************/
+   5          #include "ca51f_config.h"
+   6          #if (IC_TYPE == IC_TYPE_CA51F2X)
+   7          #include "../../includes/ca51f2sfr.h"
+   8          #include "../../includes/ca51f2xsfr.h"
+   9          #include "../../includes/gpiodef_f2.h"
+  10          #elif (IC_TYPE == IC_TYPE_CA51F3X)
+              #include "../../includes/ca51f3sfr.h"
+              #include "../../includes/ca51f3xsfr.h"
+              #include "../../includes/gpiodef_f3.h"
+              #endif
+  15          #include "../../includes/system.h"
+  16          #include "../../Library/includes/uart.h"
+  17          #include "../../Library/includes/adc.h"
+  18          #include "../../Library/includes/pwm.h"
+  19          #include "../../Library/includes/delay.h"
+  20          #include "key.h"
+  21          #include "rgb.h"
+  22          #include <intrins.h>
+  23          /*********************************************************************************************************
+             -************/
+  24          unsigned int PWM_DivDat;
+  25          unsigned int LED_R_DutyDat;
+  26          unsigned int LED_G_DutyDat;
+  27          unsigned int LED_B_DutyDat;
+  28          
+  29          void RGB_MainLoop(void)
+  30          {
+  31   1      
+  32   1      #if (IC_TYPE == IC_TYPE_CA51F2X)
+  33   1        GPIO_Init(P52F,P52_PWM2_SETTING);
+  34   1        GPIO_Init(P53F,P53_PWM3_SETTING);
+  35   1        GPIO_Init(P54F,P54_PWM4_SETTING);
+  36   1      #elif (IC_TYPE == IC_TYPE_CA51F3X)
+                GPIO_Init(P35F,P35_PWM2_SETTING);
+                GPIO_Init(P34F,P34_PWM3_SETTING);
+                GPIO_Init(P07F,P07_PWM4_SETTING);
+              #endif
+  41   1        
+  42   1        PWM_DivDat = 3686;
+  43   1        
+  44   1        LED_R_DutyDat = 0;
+  45   1        LED_G_DutyDat = 0;
+  46   1        LED_B_DutyDat = 0;
+  47   1        
+  48   1        PWM_init(PWM_CH2,Edge_Align,CKS_IH,Toggle_Off,0,0);
+  49   1        PWM_init(PWM_CH3,Edge_Align,0,Toggle_Off,0,Complementary_Off);
+  50   1        PWM_init(PWM_CH4,Edge_Align,CKS_IH,Toggle_Off,0,0);
+  51   1        
+  52   1        PWM_CfgDivDuty(PWM_CH2,PWM_DivDat,LED_B_DutyDat);
+C51 COMPILER V9.51   RGB                                                                   07/13/2017 15:37:16 PAGE 2   
+
+  53   1        PWM_CfgDivDuty(PWM_CH3,PWM_DivDat,LED_G_DutyDat);
+  54   1        PWM_CfgDivDuty(PWM_CH4,PWM_DivDat,LED_R_DutyDat);
+  55   1        
+  56   1        PWM_Update((1<<PWM_CH2)|(1<<PWM_CH3)|(1<<PWM_CH4));
+  57   1        WaitPWMUpdateComplete();
+  58   1        PWM_EnContrl((1<<PWM_CH2)|(1<<PWM_CH3)|(1<<PWM_CH4));
+  59   1        while(1)
+  60   1        {
+  61   2          do
+  62   2          {
+  63   3            Delay_ms(1);
+  64   3            LED_B_DutyDat += 5;
+  65   3            if(LED_B_DutyDat > PWM_DivDat)
+  66   3            {
+  67   4              LED_B_DutyDat = PWM_DivDat;
+  68   4            }
+  69   3            PWM_CfgDivDuty(PWM_CH2,PWM_DivDat,LED_B_DutyDat);
+  70   3            PWM_Update(1<<PWM_CH2);   
+  71   3          }
+  72   2          while(LED_B_DutyDat < PWM_DivDat);
+  73   2          do
+  74   2          {
+  75   3            Delay_ms(1);
+  76   3            if(LED_B_DutyDat >= 5)
+  77   3            {
+  78   4              LED_B_DutyDat -= 5;
+  79   4            }
+  80   3            else
+  81   3            {
+  82   4              LED_B_DutyDat = 0;
+  83   4            }
+  84   3            PWM_CfgDivDuty(PWM_CH2,PWM_DivDat,LED_B_DutyDat);
+  85   3            PWM_Update(1<<PWM_CH2);   
+  86   3          }
+  87   2          while(LED_B_DutyDat);
+  88   2          
+  89   2          
+  90   2          do
+  91   2          {
+  92   3            Delay_ms(1);
+  93   3            LED_G_DutyDat += 5;
+  94   3            if(LED_G_DutyDat > PWM_DivDat)
+  95   3            {
+  96   4              LED_G_DutyDat = PWM_DivDat;
+  97   4            }
+  98   3            PWM_CfgDivDuty(PWM_CH3,PWM_DivDat,LED_G_DutyDat);
+  99   3            PWM_Update(1<<PWM_CH3);   
+ 100   3          }
+ 101   2          while(LED_G_DutyDat < PWM_DivDat);
+ 102   2          do
+ 103   2          {
+ 104   3            Delay_ms(1);
+ 105   3            if(LED_G_DutyDat >= 5)
+ 106   3            {
+ 107   4              LED_G_DutyDat -= 5;
+ 108   4            }
+ 109   3            else
+ 110   3            {
+ 111   4              LED_G_DutyDat = 0;
+ 112   4            }
+ 113   3            PWM_CfgDivDuty(PWM_CH3,PWM_DivDat,LED_G_DutyDat);
+ 114   3            PWM_Update(1<<PWM_CH3);   
+C51 COMPILER V9.51   RGB                                                                   07/13/2017 15:37:16 PAGE 3   
+
+ 115   3          }
+ 116   2          while(LED_G_DutyDat);
+ 117   2          
+ 118   2          do
+ 119   2          {
+ 120   3            Delay_ms(1);
+ 121   3            LED_R_DutyDat += 5;
+ 122   3            if(LED_R_DutyDat > PWM_DivDat)
+ 123   3            {
+ 124   4              LED_R_DutyDat = PWM_DivDat;
+ 125   4            }
+ 126   3            PWM_CfgDivDuty(PWM_CH4,PWM_DivDat,LED_R_DutyDat);
+ 127   3            PWM_Update(1<<PWM_CH4);   
+ 128   3          }
+ 129   2          while(LED_R_DutyDat < PWM_DivDat);
+ 130   2          do
+ 131   2          {
+ 132   3            Delay_ms(1);
+ 133   3            if(LED_R_DutyDat >= 5)
+ 134   3            {
+ 135   4              LED_R_DutyDat -= 5;
+ 136   4            }
+ 137   3            else
+ 138   3            {
+ 139   4              LED_R_DutyDat = 0;
+ 140   4            }
+ 141   3            PWM_CfgDivDuty(PWM_CH4,PWM_DivDat,LED_R_DutyDat);
+ 142   3            PWM_Update(1<<PWM_CH4);   
+ 143   3          }
+ 144   2          while(LED_R_DutyDat);
+ 145   2      
+ 146   2        }
+ 147   1      }
+ 148          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    493    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =      8    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

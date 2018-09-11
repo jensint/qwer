@@ -1,0 +1,56 @@
+C51 COMPILER V9.51   WDT                                                                   06/28/2017 14:56:33 PAGE 1   
+
+
+C51 COMPILER V9.51, COMPILATION OF MODULE WDT
+OBJECT MODULE PLACED IN .\hex\wdt.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE ..\..\Library\Sources\wdt.c ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\
+                    -lst\wdt.lst) TABS(2) OBJECT(.\hex\wdt.obj)
+
+line level    source
+
+   1          #ifndef _WDT_C_
+   2          #define _WDT_C_
+   3          /*********************************************************************************************************
+             -************/
+   4          #include "ca51f_config.h"
+   5          #if (IC_TYPE == IC_TYPE_CA51F2X)
+   6          #include "../../includes/ca51f2sfr.h"
+   7          #include "../../includes/ca51f2xsfr.h"
+   8          #include "../../includes/gpiodef_f2.h"
+   9          #elif (IC_TYPE == IC_TYPE_CA51F3X)
+              #include "../../includes/ca51f3sfr.h"
+              #include "../../includes/ca51f3xsfr.h"
+              #include "../../includes/gpiodef_f3.h"
+              #endif
+  14          #include "../../includes/system.h"
+  15          #include "../../Library/includes/wdt.h"
+  16          #include <intrins.h>
+  17          /*********************************************************************************************************
+             -************/
+  18          void WDT_init(WDTS_TypeDef wdts,WDRE_TypeDef wdre,unsigned int wdtvh)
+  19          {
+  20   1        WDCON = WDTS(wdts) | WDRE(wdre);
+  21   1        WDVTHH = (unsigned char)(wdtvh>>8);
+  22   1        WDVTHL = (unsigned char)(wdtvh);  
+  23   1      }
+  24          void WDT_FeedDog(void)
+  25          {
+  26   1        WDFLG = 0xA5;
+  27   1      }
+  28          /*********************************************************************************************************
+             -************/
+  29          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     17    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

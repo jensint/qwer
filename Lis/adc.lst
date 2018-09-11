@@ -1,0 +1,122 @@
+C51 COMPILER V9.52.0.0   ADC                                                               07/24/2018 11:06:14 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE ADC
+OBJECT MODULE PLACED IN .\Output\adc.obj
+COMPILER INVOKED BY: E:\Keil\C51\BIN\C51.EXE Library\Sources\adc.c LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\
+                    -Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\adc.lst) TABS(2) OBJECT(.\Output\adc.obj)
+
+line level    source
+
+   1          #ifndef _ADC_C_
+   2          #define _ADC_C_
+   3          
+   4          /*********************************************************************************************************
+             -************/
+   5          #include "ca51f_config.h"
+   6          #if (IC_TYPE == IC_TYPE_CA51F2X)
+              #include "../../includes/ca51f2sfr.h"
+              #include "../../includes/ca51f2xsfr.h"
+              #include "../../includes/gpiodef_f2.h"
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+  11          #include "../../includes/ca51f3sfr.h"
+  12          #include "../../includes/ca51f3xsfr.h"
+  13          #include "../../includes/gpiodef_f3.h"
+  14          #endif
+  15          #include "../../includes/system.h"
+  16          #include "../../Library/includes/adc.h"
+  17          #include <intrins.h>
+  18          /*********************************************************************************************************
+             -************/
+  19          /***********************************************************************************
+  20          函数名:   ADC_init                      
+  21          功能描述：初始化ADC功能
+  22          输入参数：adc_ref   ADC参考电压设置
+  23                    adc_int   ADC中断设置
+  24                    amp_sw    是否开启运放功能
+  25                    gain      运放增益
+  26          返回值：  无
+  27          ***********************************************************************************/
+  28          void ADC_init(ADC_RefVolt_TypeDef adc_ref,InterruptSW_TypeDef adc_int,AmpSW_TypeDef amp_sw,AMP_Gain_TypeDe
+             -f gain)              
+  29          {
+  30   1        ADCON = AST(0) | ADIE(adc_int) | HTME(7) | VSEL(adc_ref);   //AST:开始转换位  ADIE:中断使能，HTME：采样周
+             -期
+  31   1        ADCFGL = ACKD(7) | ADCALE(1) | ADCHS(0);  //ACKD:14分频， ADCALE:校准位，ADCHS:通道使能位
+  32   1      #if (IC_TYPE == IC_TYPE_CA51F2X)
+                ADCFGH = AOVE(0) | VTRIM(35);
+                if(amp_sw == Enable)
+                {
+                  OPACON = OPAM(2) | OPAS(gain);      
+                }
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+  39   1        if(amp_sw == Enable)
+  40   1        {
+  41   2          ADCFGH = AOPS(gain) | VTRIM(35);
+  42   2        }
+  43   1        else
+  44   1        {
+  45   2          ADCFGH = AOPS(0) | VTRIM(35);
+  46   2        }
+  47   1      #endif
+  48   1        if(adc_int == Enable)
+  49   1        {
+  50   2          INT2EN = 1; 
+C51 COMPILER V9.52.0.0   ADC                                                               07/24/2018 11:06:14 PAGE 2   
+
+  51   2        }
+  52   1      }
+  53          /***********************************************************************************
+  54          函数名:   ADC_ConfigChannel                     
+  55          功能描述：设置ADC输入通道
+  56          输入参数：channel   ADC通道
+  57          返回值：  无
+  58          ***********************************************************************************/
+  59          void ADC_ConfigChannel(ADC_Channel_TypeDef channel)
+  60          {
+  61   1        ADCFGL = (ADCFGL&0xF0) | ADCHS(channel);
+  62   1      }
+  63          /***********************************************************************************
+  64          函数名:   ADC_StartConversion                     
+  65          功能描述：启动ADC转换
+  66          输入参数：无
+  67          返回值：  无
+  68          ***********************************************************************************/
+  69          void ADC_StartConversion(void)
+  70          {
+  71   1        ADCON |= AST(1);
+  72   1      }
+  73          
+  74          /***********************************************************************************
+  75          函数名:   GetAdcValue                     
+  76          功能描述：获取ADC转换数值
+  77          输入参数：无
+  78          返回值：  ADC值
+  79          ***********************************************************************************/
+  80          unsigned int GetAdcValue(void)
+  81          {
+  82   1        unsigned int ADC_Value;
+  83   1        while(!(ADCON & ADIF));
+  84   1        ADCON |= ADIF;
+  85   1        ADC_Value = ADCDH*256 + ADCDL;
+  86   1        ADC_Value >>= 4;
+  87   1        return ADC_Value;
+  88   1      }
+  89          
+  90          /*********************************************************************************************************
+             -************/
+  91          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     90    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----       4
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,1 @@
+"source\c\mdu.c" ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\mdu.lst) TABS (2) OBJECT(.\hex\mdu.obj)

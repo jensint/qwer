@@ -1,0 +1,1 @@
+"source\c\int.c" ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\int.lst) TABS (2) OBJECT(.\hex\int.obj)

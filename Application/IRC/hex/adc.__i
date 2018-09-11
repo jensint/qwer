@@ -1,0 +1,1 @@
+"source\c\adc.c" ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\adc.lst) TABS (2) OBJECT(.\hex\adc.obj)

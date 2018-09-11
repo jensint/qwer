@@ -1,0 +1,1 @@
+"iic_slave.c" ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\iic_slave.lst) TABS (2) OBJECT(.\hex\iic_slave.obj)

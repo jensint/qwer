@@ -1,0 +1,1 @@
+"User\RDA5807.c" LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\RDA5807.lst) TABS (2) OBJECT(.\Output\RDA5807.obj)

@@ -1,0 +1,167 @@
+C51 COMPILER V9.51   IIC_MASTER                                                            06/29/2017 10:54:40 PAGE 1   
+
+
+C51 COMPILER V9.51, COMPILATION OF MODULE IIC_MASTER
+OBJECT MODULE PLACED IN .\hex\iic_master.obj
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE iic_master.c ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\iic_master.
+                    -lst) TABS(2) OBJECT(.\hex\iic_master.obj)
+
+line level    source
+
+   1          #ifndef _WATCH_DOG_C_
+   2          #define _WATCH_DOG_C_
+   3          
+   4          /*********************************************************************************************************
+             -************/
+   5          #include "ca51f_config.h"
+   6          #if (IC_TYPE == IC_TYPE_CA51F2X)
+   7          #include "../../../includes/ca51f2sfr.h"
+   8          #include "../../../includes/ca51f2xsfr.h"
+   9          #include "../../../includes/gpiodef_f2.h"
+  10          #elif (IC_TYPE == IC_TYPE_CA51F3X)
+              #include "../../../includes/ca51f3sfr.h"
+              #include "../../../includes/ca51f3xsfr.h"
+              #include "../../../includes/gpiodef_f3.h"
+              #endif
+  15          #include "../../../includes/system.h"
+  16          #include "../../../Library/includes/uart.h"
+  17          #include "../../../Library/includes/i2c.h"
+  18          #include "../../../Library/includes/delay.h"
+  19          #include "iic_master.h"
+  20          #include <intrins.h>
+  21          /*********************************************************************************************************
+             -************/
+  22          unsigned char txIndex;
+  23          unsigned char regAddr;
+  24          unsigned char txLength;
+  25          bit rdSession;
+  26          bit iicEnd;
+  27          unsigned char rxIndex;
+  28          unsigned char rxLength;
+  29          unsigned char rxBuf[20];
+  30          unsigned char txBuf[20]={11,12,13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,31,32};
+  31          
+  32          
+  33          void INT6_ISR(void) interrupt 11 
+  34          {
+  35   1        unsigned char Sta_Temp;
+  36   1      
+  37   1        if(I2CFLG & I2CF)               //IIC中断
+  38   1        {     
+  39   2          Sta_Temp = I2CSTA;  
+  40   2          if(Sta_Temp == 0x08)          //检测到START信号
+  41   2          {
+  42   3            if(rdSession)
+  43   3            {
+  44   4              I2CDAT = I2C_ADDR|1;      //主机读阶段， 准备发送从机地址+读位
+  45   4            }
+  46   3            else
+  47   3            {
+  48   4              I2CDAT = I2C_ADDR;       //主机写数据阶段，准备发送从机地址+写位
+  49   4            }                       
+  50   3          }
+  51   2          else if(Sta_Temp == 0x18)       //Address + Write bit transmitted, ACK received
+  52   2          {     
+C51 COMPILER V9.51   IIC_MASTER                                                            06/29/2017 10:54:40 PAGE 2   
+
+  53   3            I2CDAT  = regAddr;          //发送完从机地址+写位后， 准备发送数据寄存器地址
+  54   3          }
+  55   2          else if(Sta_Temp == 0x28)      //Data byte transmitted/received in master mode, ACK received
+  56   2          {
+  57   3            if(rdSession)
+  58   3            {       
+  59   4              if(rxIndex >= rxLength)
+  60   4              {
+  61   5                I2CCON |= STP(1);       //所有数据读完， 准备发送STOP信号
+  62   5                iicEnd = 1;
+  63   5              }
+  64   4              else
+  65   4              {
+  66   5                rxBuf[rxIndex+regAddr] = I2CDAT;          //读取一字节数据    
+  67   5                rxIndex++;
+  68   5                if(rxIndex <= (rxLength-1))
+  69   5                {
+  70   6                  I2CCON |= AAK(1);               //如果不是最后一字节，预设ACK状态
+  71   6                }
+  72   5                else
+  73   5                {
+  74   6                  I2CCON &= ~AAK(1);        //如果是最后一字节，不发送ACK
+  75   6                }
+  76   5              }                   
+  77   4            }
+  78   3            else
+  79   3            {
+  80   4              I2CCON |= STA(1); 
+  81   4              rdSession = 1;      
+  82   4            }
+  83   3          }
+  84   2          else if(Sta_Temp == 0x30)      //Data byte transmitted/received in master mode, ACK not received
+  85   2          {
+  86   3            if(rdSession)
+  87   3            {       
+  88   4              if(rxIndex >= rxLength)
+  89   4              {
+  90   5                I2CCON |= STP(1); 
+  91   5                iicEnd = 1;
+  92   5              }                   
+  93   4            }
+  94   3          }
+  95   2          else if(Sta_Temp == 0x40)       //Address + Read bit transmitted, ACK received
+  96   2          {   
+  97   3            I2CCON |= AAK(1); 
+  98   3            rxIndex=0;          
+  99   3          }
+ 100   2          else if(Sta_Temp == 0x48)       //Address + Read bit transmitted, no ACK received
+ 101   2          {   
+ 102   3            I2CCON |= AAK(1); 
+ 103   3            rxIndex=0;    
+ 104   3          } 
+ 105   2          Uart0_PutChar(Sta_Temp);  
+ 106   2          I2CFLG  |= I2CF;
+ 107   2        }
+ 108   1      
+ 109   1        if(I2CFLG & I2CSTP)
+ 110   1        {
+ 111   2          I2CFLG  |= I2CSTP;  
+ 112   2        }
+ 113   1      }                     
+ 114          void IIC_Master_MainLoop(void)
+C51 COMPILER V9.51   IIC_MASTER                                                            06/29/2017 10:54:40 PAGE 3   
+
+ 115          {
+ 116   1      #if (IC_TYPE == IC_TYPE_CA51F2X)
+ 117   1        I2C_SelectComPin(I2C_SEL_P36_P37);
+ 118   1      #elif (IC_TYPE == IC_TYPE_CA51F3X)
+                I2C_SelectComPin(I2C_SEL_P30_P31);
+              #endif
+ 121   1        I2C_init(I2CE_enable,I2CIE_enable,STFE_enable,I2C_ADDR,80);
+ 122   1        INT6EN = 1;  
+ 123   1      
+ 124   1        while(1)
+ 125   1        {
+ 126   2          rdSession = 0;
+ 127   2          regAddr = 0;
+ 128   2          iicEnd = 0;
+ 129   2          rxLength = 10;
+ 130   2          I2CCON |= STA(1); 
+ 131   2          while(!iicEnd);
+ 132   2          Delay_ms(10);
+ 133   2      //      uart_printf("ok!\n"); 
+ 134   2      
+ 135   2        }
+ 136   1      }
+ 137          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    235    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     45    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      2    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,10 @@
+".\hex\main.obj",
+".\hex\iic_master.obj",
+".\hex\uart.obj",
+".\hex\i2c.obj",
+".\hex\delay.obj",
+".\hex\STARTUP.obj" 
+TO ".\hex\ca51fx" 
+PRINT(".\lst\ca51fx.m51") RAMSIZE(256) 
+CODE( 0X0000-0X7FFF )
+XDATA( 0X0000-0X0FFF )

@@ -1,0 +1,1 @@
+"..\..\..\Library\Sources\uart.c" ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\uart.lst) TABS (2) OBJECT(.\hex\uart.obj)

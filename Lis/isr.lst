@@ -1,0 +1,287 @@
+C51 COMPILER V9.52.0.0   ISR                                                               07/24/2018 11:06:12 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE ISR
+OBJECT MODULE PLACED IN .\Output\isr.obj
+COMPILER INVOKED BY: E:\Keil\C51\BIN\C51.EXE User\isr.c LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\Library\Inc
+                    -ludes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\isr.lst) TABS(2) OBJECT(.\Output\isr.obj)
+
+line level    source
+
+   1          #ifndef _ISR_C_
+   2          #define _ISR_C_
+   3          
+   4          
+   5          
+   6          #include "ca51f_config.h"
+   7          #if (IC_TYPE == IC_TYPE_CA51F2X)
+              #include "../../includes/ca51f2sfr.h"
+              #include "../../includes/ca51f2xsfr.h"
+              #include "../../includes/gpiodef_f2.h"
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+  12          #include "../../includes/ca51f3sfr.h"
+  13          #include "../../includes/ca51f3xsfr.h"
+  14          #include "../../includes/gpiodef_f3.h"
+  15          #endif
+  16          
+  17          #include "../../includes/system.h"
+  18          #include <intrins.h>
+  19          
+  20          #include "app_config.h"
+  21          #include "app_task.h"
+  22          
+  23          
+  24          extern uint8_t RDA_Time_Count;
+  25          
+  26          
+  27          void INT0_ISR(void) interrupt 0
+  28          {
+  29   1      
+  30   1      
+  31   1      }
+  32          
+  33          
+  34          void TIMER0_ISR(void) interrupt 1
+  35          {
+  36   1      //  TH0 = (unsigned char)((TIMER_DIV>>5)&0x00ff);
+  37   1      //  TL0 = (unsigned char)TIMER_DIV&0x1f;
+  38   1        TH0 = (unsigned char)((TIME_DIV_NUM>>5)&0x00ff);
+  39   1        TL0 = (unsigned char)TIME_DIV_NUM&0x1f;
+  40   1        
+  41   1        app_task_time.AdcKeyScan++;
+  42   1        
+  43   1        app_task_time.PowerDet++;
+  44   1        
+  45   1        if(app_task_time.FMAutoSearch > 0)
+  46   1        {
+  47   2          app_task_time.FMAutoSearch--;
+  48   2        }
+  49   1        
+  50   1        if(FM_INIT_COUNNT > 0)
+  51   1        {
+  52   2          FM_INIT_COUNNT--;
+  53   2        }
+  54   1        
+C51 COMPILER V9.52.0.0   ISR                                                               07/24/2018 11:06:12 PAGE 2   
+
+  55   1        if(FM_CHANGE_COUNT > 0)
+  56   1        {
+  57   2          FM_CHANGE_COUNT--;
+  58   2        }
+  59   1        
+  60   1        if(ADC_KEY_JUDGE_TIME > 0)
+  61   1        {
+  62   2          ADC_KEY_JUDGE_TIME--;
+  63   2        }
+  64   1        
+  65   1        if(TS_KEY_JUDGE_TIME > 0)
+  66   1        {
+  67   2          TS_KEY_JUDGE_TIME--;
+  68   2        }
+  69   1        
+  70   1        if(BT_Uart.BT_Init_Count < 0xff)
+  71   1        {
+  72   2          BT_Uart.BT_Init_Count++;
+  73   2        }
+  74   1        
+  75   1        if(BT_Uart.BTCmdResendTime_count < 0xff)
+  76   1        {
+  77   2          BT_Uart.BTCmdResendTime_count++;
+  78   2        }
+  79   1        
+  80   1        if(LEDW_PWM_Time > 0)
+  81   1        {
+  82   2          LEDW_PWM_Time--;
+  83   2        }
+  84   1        
+  85   1        if(sys_state.Alarm != ALARM_IDLE)
+  86   1        {
+  87   2          if(Alarm_Ring_Time > 0)
+  88   2          {
+  89   3            Alarm_Ring_Time--;
+  90   3            if(Alarm_Ring_Time == 0)
+  91   3            {
+  92   4              BT_Uart.BTCmd_Temp = CMD_RING1;
+  93   4              BT_Uart.BTCmdResendFlag = 1;
+  94   4              Alarm_Ring_Flag = 1;
+  95   4            }
+  96   3          }
+  97   2      
+  98   2        }
+  99   1      }
+ 100          
+ 101          
+ 102          void UART0_ISR(void) interrupt 4
+ 103          {
+ 104   1        uint8_t rx_dat; 
+ 105   1        if(RI0)
+ 106   1        {
+ 107   2          RI0 = 0;
+ 108   2          rx_dat = S0BUF; 
+ 109   2          if(Mcu_RcvBTCmd(rx_dat))
+ 110   2          {
+ 111   3            BT_Uart.BTCmdRcvFinishFlag = 1;
+ 112   3          }
+ 113   2        }
+ 114   1        if(TI0)
+ 115   1        { 
+ 116   2          TI0 = 0;  
+C51 COMPILER V9.52.0.0   ISR                                                               07/24/2018 11:06:12 PAGE 3   
+
+ 117   2          uart0_tx_flag = 0;
+ 118   2        }
+ 119   1      }
+ 120          
+ 121          
+ 122          void INT3_ISR (void) interrupt 8
+ 123          { 
+ 124   1        if(TKIF != 0)
+ 125   1        {
+ 126   2      //    LED_GREEN_PIN_DATA = ~LED_GREEN_PIN_DATA;
+ 127   2          TS_ISR();
+ 128   2        }
+ 129   1      }
+ 130          
+ 131          
+ 132          void RTC_ISR(void) interrupt 13
+ 133          {
+ 134   1        static uint8_t display_flag = 0;  
+ 135   1        
+ 136   1        if(RTCIF & RTC_MF)
+ 137   1        {//毫秒中断
+ 138   2          RTCIF = RTC_MF;
+ 139   2          TS_MS_ISR ();
+ 140   2        }
+ 141   1        
+ 142   1        if(RTCIF & RTC_HF)
+ 143   1        {//半秒中断
+ 144   2          RTCIF = RTC_HF;
+ 145   2          RTC_Num.Hour = RTCH & 0x1F;
+ 146   2          RTC_Num.Minute = RTCM & 0x3F; 
+ 147   2          RTC_Num.Second = RTCS & 0x3F;
+ 148   2          
+ 149   2          TS_HS_ISR ();
+ 150   2          
+ 151   2          if(RDA_Time_Count > 0)
+ 152   2          {
+ 153   3            RDA_Time_Count--;
+ 154   3          }
+ 155   2        
+ 156   2          if(Settime_Dis_Count > 0)
+ 157   2          {
+ 158   3            Settime_Dis_Count--;
+ 159   3          }
+ 160   2          
+ 161   2          if(count>0)
+ 162   2          {
+ 163   3            count--;
+ 164   3          }
+ 165   2          else
+ 166   2          {
+ 167   3            ge+=1;
+ 168   3            count=2;
+ 169   3          }
+ 170   2          
+ 171   2          if(sys_state.SetVolumeFlag)
+ 172   2          {
+ 173   3            if(SetVolume_Keeptime_Count > 0)
+ 174   3            {
+ 175   4              SetVolume_Keeptime_Count--;
+ 176   4            }
+ 177   3            else
+ 178   3            {
+C51 COMPILER V9.52.0.0   ISR                                                               07/24/2018 11:06:12 PAGE 4   
+
+ 179   4              sys_state.SetVolumeFlag = 0;
+ 180   4              if(sys_state.Mode == SYS_FM)
+ 181   4              {
+ 182   5                FM_Freq_LED_Display(sys_state.FMFreq);
+ 183   5              }
+ 184   4            }
+ 185   3          }
+ 186   2          else
+ 187   2          {
+ 188   3          
+ 189   3            if(sys_state.SetTime != Unit_Null)
+ 190   3            {
+ 191   4              if(Settime_Keeptime_Count> 0)
+ 192   4              {
+ 193   5                Settime_Keeptime_Count--;
+ 194   5              } 
+ 195   4            
+ 196   4              if(Settime_Keeptime_Count == 0)
+ 197   4              {
+ 198   5                sys_state.SetTime = Unit_Null;
+ 199   5                if(sys_state.Mode == SYS_ALARM1 || sys_state.Mode == SYS_ALARM2)
+ 200   5                {
+ 201   6                  Alarm_LED_Display(sys_state.Mode);
+ 202   6                }
+ 203   5              }
+ 204   4            }
+ 205   3            else
+ 206   3            {
+ 207   4              Settime_Keeptime_Count = 0;
+ 208   4            }
+ 209   3          
+ 210   3            if(sys_state.SetTime != Unit_Null)    //如果设置的位数不为空  ，有设置的位数
+ 211   3            {
+ 212   4              
+ 213   4              if(Settime_Dis_Count == 0)       //如果按了设置时间键，则1.5后进入闪烁
+ 214   4              {
+ 215   5                Settime_LED_Display(sys_state.Mode, sys_state.SetTime, display_flag);
+ 216   5                if(display_flag)
+ 217   5                {
+ 218   6                  display_flag = 0;
+ 219   6                }
+ 220   5                else
+ 221   5                {
+ 222   6                  display_flag = 1;
+ 223   6                }   
+ 224   5              }
+ 225   4              else
+ 226   4              {
+ 227   5                display_flag = 0;
+ 228   5              }
+ 229   4            }
+ 230   3            else if(sys_state.Mode == SYS_AUX || sys_state.Mode == SYS_CLOCK)   //如果没有设置位数，则正常现实
+ 231   3            {
+ 232   4              Led_Display(RTC_Num.Hour, RTC_Num.Minute, sys_state.Mode);
+ 233   4            }
+ 234   3      
+ 235   3             if(sys_state.Mode == SYS_BLUETOOTH)
+ 236   3            {
+ 237   4              LED_COUNT(sys_state.Mode);
+ 238   4            } 
+ 239   3      //      else if(sys_state.Mode == SYS_ALARM1 || sys_state.Mode == SYS_ALARM2)
+ 240   3      //      {
+C51 COMPILER V9.52.0.0   ISR                                                               07/24/2018 11:06:12 PAGE 5   
+
+ 241   3      //        Alarm_LED_Display(sys_state.Mode);
+ 242   3      //      }
+ 243   3          }
+ 244   2        }
+ 245   1        
+ 246   1        if(RTCIF & RTC_AF)
+ 247   1        {//闹钟中断
+ 248   2          RTCIF = RTC_AF;
+ 249   2      //    LED_GREEN_PIN_DATA = 0;
+ 250   2        }
+ 251   1      }
+ 252          
+ 253          
+ 254          #endif
+ 255          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    750    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      1    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

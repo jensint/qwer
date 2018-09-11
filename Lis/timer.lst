@@ -1,0 +1,101 @@
+C51 COMPILER V9.52.0.0   TIMER                                                             07/24/2018 11:06:15 PAGE 1   
+
+
+C51 COMPILER V9.52.0.0, COMPILATION OF MODULE TIMER
+OBJECT MODULE PLACED IN .\Output\timer.obj
+COMPILER INVOKED BY: E:\Keil\C51\BIN\C51.EXE Library\Sources\timer.c LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;
+                    -.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\timer.lst) TABS(2) OBJECT(.\Output\timer.obj)
+
+line level    source
+
+   1          #ifndef _TIMER_C_
+   2          #define _TIMER_C_
+   3          
+   4          /*********************************************************************************************************
+             -************/
+   5          #include "ca51f_config.h"
+   6          #if (IC_TYPE == IC_TYPE_CA51F2X)
+              #include "../../includes/ca51f2sfr.h"
+              #include "../../includes/ca51f2xsfr.h"
+              #include "../../includes/gpiodef_f2.h"
+              #elif (IC_TYPE == IC_TYPE_CA51F3X)
+  11          #include "../../includes/ca51f3sfr.h"
+  12          #include "../../includes/ca51f3xsfr.h"
+  13          #include "../../includes/gpiodef_f3.h"
+  14          #endif
+  15          #include "../../includes/system.h"
+  16          #include "../../Library/includes/uart.h"
+  17          #include "../../Library/includes/timer.h"
+  18          #include <intrins.h>
+  19          
+  20          
+  21          void Timer0_Init(TIMER_Mode_TypeDef timer_mode,
+  22                           TIMER_Fun_TypeDef timer_func,
+  23                           unsigned char interrupt_sw,
+  24                           TIMER_Gate_Mode_TypeDef timer_gate_mode,
+  25                           unsigned int div)
+  26          {
+  27   1        TMOD &= 0xf0;
+  28   1        
+  29   1        TMOD |= (timer_gate_mode<<3 | timer_func<<2 | timer_mode);
+  30   1        
+  31   1        switch(timer_mode)
+  32   1        {
+  33   2          case 0:
+  34   2            TH0 = (unsigned char)((div>>5)&0x00ff);
+  35   2            TL0 = (unsigned char)div&0x1f;
+  36   2            break;
+  37   2          
+  38   2          case 1:
+  39   2            TH0 = (unsigned char)(div>>8)&0xff;
+  40   2            TL0 = (unsigned char)div&0xff;
+  41   2            break;
+  42   2          
+  43   2          case 2:
+  44   2            TH0 = (unsigned char)(div>>8);
+  45   2            TL0 = (unsigned char)div;
+  46   2            break;
+  47   2          
+  48   2          case 3:
+  49   2            break;
+  50   2          
+  51   2          default:
+  52   2            break;
+  53   2        }
+C51 COMPILER V9.52.0.0   TIMER                                                             07/24/2018 11:06:15 PAGE 2   
+
+  54   1        
+  55   1        IE &= 0xfd;
+  56   1        IE |= (interrupt_sw<<1);   //外部中断使能位
+  57   1        
+  58   1        if(timer_gate_mode == TIMER_Gate_Mode_Tr)
+  59   1        {
+  60   2          TR0 = 1;  //开始计时   TR0：运行控制位
+  61   2        } 
+  62   1        
+  63   1      }
+  64          
+  65          #if 0
+              //void TIMER0_ISR (void) interrupt 1
+              //{
+              //  
+              //}
+              #endif
+  71          
+  72          
+  73          
+  74          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    111    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----       6
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

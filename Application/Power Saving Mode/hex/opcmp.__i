@@ -1,0 +1,1 @@
+"source\c\opcmp.c" ROM(COMPACT) BROWSE DEBUG OBJECTEXTEND PRINT(.\lst\opcmp.lst) TABS (2) OBJECT(.\hex\opcmp.obj)

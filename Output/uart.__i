@@ -1,0 +1,1 @@
+"Library\Sources\uart.c" LARGE ROM(COMPACT) BROWSE INCDIR(.\includes;.\User;.\Library\Includes;.\TS_Lib\Includes) DEBUG OBJECTEXTEND PRINT(.\Lis\uart.lst) TABS (2) OBJECT(.\Output\uart.obj)
